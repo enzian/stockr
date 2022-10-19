@@ -19,3 +19,13 @@ let stock = {
 
 stockRepo.Create stock
 
+
+let newStock = {
+    Id = "lkasdjwj"
+    Location = "1.02.011.0.L"
+    Material = "A" |> Material
+    Amount = (10 |> Quantity, "pcs" |> Unit)
+}
+stockRepo.Update newStock
+
+stockRepo.Delete stock.Id

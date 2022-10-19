@@ -7,7 +7,8 @@ open stock
 open persistence
 
 let db = Open "mongodb://localhost:27017" "stockr"
-let repo = CreateRepo db
+let stockCol = db.GetCollection<StockModel>("stocks")
+let stockRepo = StockRepo stockCol
 
 let stock = {
     Id = "lkasdjwj"
@@ -16,5 +17,5 @@ let stock = {
     Amount = (10 |> Quantity, "pcs" |> Unit)
 }
 
-repo.Create stock
+stockRepo.Create stock
 

@@ -16,30 +16,19 @@ type StockModel(id, location, material, quantity, unit) =
     member this.Quantity = quantity
     member this.Unit = unit
 
-// [<CLIMutable>]
-// type StockModel = {
-//     Id: string
-//     Location: string
-//     Material: string
-//     Quantity: int
-//     Unit: string
-// }
-
-type CreateStock = stock.Stock -> bool
+type CreateStock = stock.Stock -> Result<unit, string>
 
 type StockRepository = {
     Create: CreateStock
 }
 
-let CreateRepo (db : IMongoDatabase) = {
+let StockRepo (col : IMongoCollection<StockModel>) = {
     Create = fun s -> 
         try
             let (amount, unit) = s.Amount
-            db.GetCollection<StockModel>("stocks").InsertOne(
+            col.InsertOne(
                 new StockModel ( s.Id, s.Location, s.Material.Value, amount.Value, unit.Value))
-            true
+            Ok ()
         with
-            ex -> 
-                printf "Failed %s" ex.Message
-                false
+            ex -> Error ex.Message
 }

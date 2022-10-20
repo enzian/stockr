@@ -79,7 +79,6 @@ let StockRepo (col: IMongoCollection<StockModel>) =
       Update = UpdateStockRecord col
       FindById = FindStockRecordById col }
 
-
 type LocationModel(id, labels, annotations) =
     member this.Id = id
     member this.Labels = labels
@@ -87,7 +86,7 @@ type LocationModel(id, labels, annotations) =
 
 let CreateLocation (col: IMongoCollection<LocationModel>) s =
     try
-        col.InsertOne(new LocationModel(s.Id, s.Labels, s.Annotations)) |> ignore
+        col.InsertOne(new LocationModel(s.Id, s.Labels |> Map.toSeq |> dict, s.Annotations |> Map.toSeq |> dict)) |> ignore
         Ok()
     with ex ->
         Error ex.Message
@@ -102,12 +101,18 @@ let DeleteLocation (col: IMongoCollection<LocationModel>) (s: string) =
 let UpdateLocation (col: IMongoCollection<LocationModel>) s =
     try
         let filter = Builders<LocationModel>.Filter.Eq ((fun x -> x.Id), s.Id)
-        let model = new LocationModel(s.Id, s.Labels, s.Annotations)
+        let model = new LocationModel(s.Id, s.Labels |> Map.toSeq |> dict, s.Annotations |> Map.toSeq |> dict)
 
         col.ReplaceOne(filter, model)
         Ok()
     with ex ->
         Error ex.Message
+
+let toMap (dic : System.Collections.Generic.IDictionary<_,_>) = 
+    dic 
+    |> Seq.map (|KeyValue|)  
+    |> Map.ofSeq
+
 
 let FindLocationById (col: IMongoCollection<LocationModel>) s =
     try
@@ -117,8 +122,8 @@ let FindLocationById (col: IMongoCollection<LocationModel>) s =
         Ok(
             Some(
                 { Id = result.Id
-                  Labels = result.Labels
-                  Annotations = result.Annotations }
+                  Labels = result.Labels |> toMap
+                  Annotations = result.Annotations |> toMap }
             )
         )
     with

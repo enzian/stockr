@@ -9,8 +9,8 @@ open locations
 open persistence
 
 let db = Open "mongodb://localhost:27017" "stockr"
-// let stockCol = db.GetCollection<StockModel>("stocks")
-// let stockRepo = StockRepo stockCol
+let stockCol = db.GetCollection<StockModel>("stocks")
+let stockRepo = StockRepo stockCol
 
 // let stock = {
 //     Id = "lkasdjwj"
@@ -38,15 +38,24 @@ let db = Open "mongodb://localhost:27017" "stockr"
 let locationCol = db.GetCollection<LocationModel>("locations")
 let locationRepo = LocationRepo locationCol
 
-let location = {
-    Id = "10.00.01"
-    Labels = Map [("a", "b")]
-    Annotations = Map [("a", "b")]
-}
-locationRepo.Create location
-let location1 = {
-    Id = "12.1.2"
-    Labels = Map [("a", "b")]
-    Annotations = Map [("a", "b")]
-}
-locationRepo.Create location1
+// let location = {
+//     Id = "10.00.01"
+//     Labels = Map [("zone", "10"); ("rack", "0"); ("space", "1")]
+//     Annotations = Map [("zone", "goods receive")]
+// }
+// locationRepo.Create location
+// let location1 = {
+//     Id = "12.00.01"
+//     Labels = Map [("zone", "12"); ("rack", "0"); ("space", "1")]
+//     Annotations = Map [("zone", "pallet storage")]
+// }
+// locationRepo.Create location1
+
+// locationRepo.Delete "lkasdjwj"
+
+locationRepo.FindById "10.00.01"
+
+#load "logistics.fs"
+open logistics
+
+MoveStock locationRepo stockRepo "lkasdjwj" "12.00.01"

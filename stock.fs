@@ -14,6 +14,11 @@ type Quantity = Quantity of int
     with
         member x.Value = match x with 
             | Quantity s -> s
+        static member (+) (Quantity (left), Quantity (right)) =
+            left + right |> Quantity
+        static member (-) (Quantity (left), Quantity (right)) =
+            left - right |> Quantity
+
 
 type Amount = Quantity * Unit
 

@@ -67,17 +67,33 @@ let FindStockRecordById (col: IMongoCollection<StockModel>) s =
     | :? NullReferenceException -> Ok(None)
     | ex -> Error ex.Message
 
+let FindStockByLocation (col: IMongoCollection<StockModel>) location =
+    try
+        let filter = Builders<StockModel>.Filter.Eq ((fun x -> x.Location), location)
+        Ok (
+            col.Find(filter).ToList()
+            :> seq<StockModel>
+            |> Seq.map (fun x ->
+                { Id = x.Id
+                  Location = x.Location
+                  Material = x.Material |> Material
+                  Amount = (x.Quantity |> Quantity, x.Unit |> Unit) } )
+        )
+    with ex -> Error ex.Message
+
 type StockRepository =
     { Create: stock.Stock -> Result<unit, string>
       Delete: string -> Result<unit, string>
       Update: stock.Stock -> Result<unit, string>
-      FindById: string -> Result<Option<stock.Stock>, string> }
+      FindById: string -> Result<Option<stock.Stock>, string>
+      FindByLocation: string -> Result<seq<stock.Stock>, string> }
 
 let StockRepo (col: IMongoCollection<StockModel>) =
     { Create = CreateStockRecord col
       Delete = DeleteStockRecord col
       Update = UpdateStockRecord col
-      FindById = FindStockRecordById col }
+      FindById = FindStockRecordById col 
+      FindByLocation = FindStockByLocation col }
 
 type LocationModel(id, labels, annotations) =
     member this.Id = id

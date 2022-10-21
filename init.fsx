@@ -1,25 +1,27 @@
-#r "nuget: MongoDB.Driver";;
+#r "nuget: MongoDB.Driver"
 #load "stock.fs"
+
 open stock
 
 #load "locations.fs"
 open locations
 
-#load "persistence.fs";;
+#load "persistence.fs"
+
 open persistence
 
 let db = Open "mongodb://localhost:27017" "stockr"
 let stockCol = db.GetCollection<StockModel>("stocks")
 let stockRepo = StockRepo stockCol
 
-// let stock = {
-//     Id = "lkasdjwj"
-//     Location = "test"
-//     Material = "A" |> Material
-//     Amount = (10 |> Quantity, "pcs" |> Unit)
-// }
+let stock = {
+    Id = "rrlaihbrdq"
+    Location = "10.00.01"
+    Material = "A" |> Material
+    Amount = (10 |> Quantity, "pcs" |> Unit)
+}
 
-// stockRepo.Create stock
+stockRepo.Create stock
 
 
 // let newStock = {
@@ -33,17 +35,12 @@ let stockRepo = StockRepo stockCol
 // stockRepo.FindById "lkasdjwj"
 
 // stockRepo.Delete stock.Id
+// stockRepo.FindByLocation "lkasdjwj"
 
 
 let locationCol = db.GetCollection<LocationModel>("locations")
 let locationRepo = LocationRepo locationCol
 
-// let location = {
-//     Id = "10.00.01"
-//     Labels = Map [("zone", "10"); ("rack", "0"); ("space", "1")]
-//     Annotations = Map [("zone", "goods receive")]
-// }
-// locationRepo.Create location
 // let location1 = {
 //     Id = "12.00.01"
 //     Labels = Map [("zone", "12"); ("rack", "0"); ("space", "1")]
@@ -53,9 +50,10 @@ let locationRepo = LocationRepo locationCol
 
 // locationRepo.Delete "lkasdjwj"
 
-locationRepo.FindById "10.00.01"
+// locationRepo.FindById "10.00.01"
 
 #load "logistics.fs"
 open logistics
 
-MoveStock locationRepo stockRepo "lkasdjwj" "12.00.01"
+// MoveStock locationRepo stockRepo "lkasdjwj" "12.00.01"
+MoveQuantity locationRepo stockRepo "x9e3drpvgn" "10.00.01" "A" (3 |> Quantity, "pcs" |> Unit)

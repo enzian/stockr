@@ -3,6 +3,7 @@ module logistics
 open stock
 open locations
 open persistence
+open System
 
 type StockMovementError =
     | StockNotFound
@@ -10,6 +11,7 @@ type StockMovementError =
     | FailedToMoveStock
     | InsufficientQuantity
     | DisparateUnits
+    | FailedToDropEmptySpace
 
 let MoveStock (locationRepo: LocationRepository) (stockRepo: StockRepository) stockId targetLocationId =
     match stockRepo.FindById stockId with
@@ -56,7 +58,7 @@ let MoveQuantity
                     with
                     | None ->  
                         let newStock = {
-                            Id = ""
+                            Id = Guid.NewGuid().ToString()
                             Location = targetLocationId
                             Material = stock.Material
                             Amount = amount }
@@ -66,8 +68,15 @@ let MoveQuantity
                         let (qty, _) = amount
                         let targetStock = { tail with Amount = ((tqty + qty), unit) }
                         stockRepo.Update targetStock |> ignore
-                    
-                    let deductedSourceStock = {stock with Amount = ((sqty - qty), unit)}
-                    stockRepo.Update deductedSourceStock
-                    Ok ()
+
+                    match sqty - qty with
+                    | Quantity (x) when x > 0 ->
+                        let deductedSourceStock = {stock with Amount = (x |> Quantity, unit)}
+                        match stockRepo.Update deductedSourceStock with
+                        | Error _ -> Error FailedToMoveStock 
+                        | Ok _ -> Ok ()
+                    | Quantity (x) when x <= 0 ->
+                        match stockRepo.Delete stock.Id with
+                        | Error _ -> Error FailedToDropEmptySpace
+                        | Ok _ -> Ok ()
                             

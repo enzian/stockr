@@ -5,6 +5,10 @@ open System
 
 open stock
 open locations
+open FsHttp
+
+open System.Text.Json
+open System.Net
 
 let Open (connStr: string) db =
     let client = new MongoClient(connStr)
@@ -30,73 +34,108 @@ type StockModel(id: string, location, material, quantity, unit, labels, annotati
     member this.Labels = labels
     member this.Annotations = annotations
 
-let CreateStockRecord (col: IMongoCollection<StockModel>) s =
+type EtcdKv = { key: string; value: string}
+type EtcdKvRange = { kvs: EtcdKv array option ; count : string option }
+
+
+let CreateStockRecord host s =
     try
         let (amount, unit) = s.Amount
 
-        col.InsertOne(new StockModel(s.Id, s.Location, s.Material.Value, amount.Value, unit.Value, s.Labels |> toMap |> Map.toSeq |> dict, s.Annotations |> toMap |> Map.toSeq |> dict))
-        |> ignore
-
-        Ok()
+        let stockModel = new StockModel(s.Id, s.Location, s.Material.Value, amount.Value, unit.Value, s.Labels, s.Annotations)
+        
+        let resp =
+            http {
+                POST (sprintf "%skv/put" host)
+                body
+                jsonSerialize {|
+                    key = sprintf "/locations/%s" s.Id 
+                        |> System.Text.Encoding.UTF8.GetBytes
+                        |> Convert.ToBase64String
+                    value = JsonSerializer.Serialize stockModel 
+                        |> System.Text.Encoding.UTF8.GetBytes 
+                        |> Convert.ToBase64String
+                |}
+            }
+            |> Request.send
+        
+        match resp.statusCode with
+            | HttpStatusCode.OK -> Ok ()
+            | status -> Error (sprintf "Request to ETCD failed: %O" status)
+        
     with ex ->
         Error ex.Message
 
-let DeleteStockRecord (col: IMongoCollection<StockModel>) (s: string) =
+let DeleteStockRecord host (s: string) =
+        let resp =
+            http {
+                POST (sprintf "%skv/deleterange" host)
+                body
+                jsonSerialize {|
+                    key = sprintf "/locations/%s" s 
+                        |> System.Text.Encoding.UTF8.GetBytes
+                        |> Convert.ToBase64String
+                |}
+            }
+            |> Request.send
+        match resp.statusCode with
+            | HttpStatusCode.OK -> Ok ()
+            | status -> Error (sprintf "Request to ETCD failed: %O" status)
+
+let UpdateStockRecord = CreateStockRecord
+
+let FindStockRecordById host s =
+    sprintf "/locations/%s" s 
+        |> System.Text.Encoding.UTF8.GetBytes
+        |> Convert.ToBase64String
+        |> printfn "%s"
     try
-        col.DeleteOne(fun x -> x.Id = s) |> ignore
-        Ok()
+        let resp =
+            http {
+                POST (sprintf "%skv/range" host)
+                body
+                jsonSerialize {|
+                    key = sprintf "/locations/%s" s 
+                        |> System.Text.Encoding.UTF8.GetBytes
+                        |> Convert.ToBase64String
+                |}
+            }
+            |> Request.send
+            |> Response.assert2xx
+            |> Response.toJson
+            |> JsonSerializer.Deserialize<EtcdKvRange>
+        match (resp.count, resp.kvs) with
+        | (Some c, Some kvs) when (c |> int) > 0 ->
+            let x = kvs[0] |> (fun x -> x.value) |> Convert.FromBase64String |> JsonSerializer.Deserialize<StockModel>
+            
+            Ok (Some {
+                Id = x.Id
+                Location = x.Location
+                Material = x.Material |> Material
+                Amount = (x.Quantity |> Quantity, x.Unit |> Unit)
+                Labels = x.Labels
+                Annotations = x.Annotations })
+        | _  -> Ok None
     with ex ->
         Error ex.Message
 
-let UpdateStockRecord (col: IMongoCollection<StockModel>) s =
-    try
-        let (amount, unit) = s.Amount
-        let filter = Builders<StockModel>.Filter.Eq ((fun x -> x.Id), s.Id)
+let FindStockByLocation host location : Result<seq<stock.Stock>, string> =
+    // try
+    //     let filter = Builders<StockModel>.Filter.Eq ((fun x -> x.Location), location)
 
-        let model =
-            new StockModel(s.Id, s.Location, s.Material.Value, amount.Value, unit.Value, s.Labels |> toMap |> Map.toSeq |> dict, s.Annotations |> toMap |> Map.toSeq |> dict)
-
-        col.ReplaceOne(filter, model) |> ignore
-        Ok()
-    with ex ->
-        Error ex.Message
-
-
-let FindStockRecordById (col: IMongoCollection<StockModel>) s =
-    try
-        let filter = Builders<StockModel>.Filter.Eq ((fun x -> x.Id), s)
-        let result = col.Find(filter).Limit(1).FirstOrDefault()
-
-        Ok(
-            Some(
-                { Id = result.Id
-                  Location = result.Location
-                  Material = result.Material |> Material
-                  Amount = (result.Quantity |> Quantity, result.Unit |> Unit)
-                  Labels = result.Labels |> toMap
-                  Annotations = result.Annotations |> toMap }
-            )
-        )
-    with
-    | :? NullReferenceException -> Ok(None)
-    | ex -> Error ex.Message
-
-let FindStockByLocation (col: IMongoCollection<StockModel>) location =
-    try
-        let filter = Builders<StockModel>.Filter.Eq ((fun x -> x.Location), location)
-
-        Ok(
-            col.Find(filter).ToList() :> seq<StockModel>
-            |> Seq.map (fun x ->
-                { Id = x.Id
-                  Location = x.Location
-                  Material = x.Material |> Material
-                  Amount = (x.Quantity |> Quantity, x.Unit |> Unit)
-                  Labels = x.Labels |> toMap
-                  Annotations = x.Annotations |> toMap })
-        )
-    with ex ->
-        Error ex.Message
+    //     Ok(
+    //         col.Find(filter).ToList() :> seq<StockModel>
+    //         |> Seq.map (fun x ->
+    //             { Id = x.Id
+    //               Location = x.Location
+    //               Material = x.Material |> Material
+    //               Amount = (x.Quantity |> Quantity, x.Unit |> Unit)
+    //               Labels = x.Labels |> toMap
+    //               Annotations = x.Annotations |> toMap })
+    //     )
+    // with ex ->
+    //     Error ex.Message
+    Ok ([] :> seq<stock.Stock>)
 
 type StockRepository =
     { Create: stock.Stock -> Result<unit, string>
@@ -105,12 +144,12 @@ type StockRepository =
       FindById: string -> Result<Option<stock.Stock>, string>
       FindByLocation: string -> Result<seq<stock.Stock>, string> }
 
-let StockRepo (col: IMongoCollection<StockModel>) =
-    { Create = CreateStockRecord col
-      Delete = DeleteStockRecord col
-      Update = UpdateStockRecord col
-      FindById = FindStockRecordById col
-      FindByLocation = FindStockByLocation col }
+let StockRepo host =
+    { Create = CreateStockRecord host 
+      Delete = DeleteStockRecord host
+      Update = UpdateStockRecord host
+      FindById = FindStockRecordById host
+      FindByLocation = FindStockByLocation host }
 
 type LocationModel(id, labels, annotations) =
     member this.Id = id

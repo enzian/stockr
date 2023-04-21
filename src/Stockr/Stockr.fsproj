@@ -10,6 +10,7 @@
     <Compile Include="Logistics.fs" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="FsHttp" Version="10.0.0" />
     <PackageReference Include="MongoDB.Driver" Version="2.18.0" />
   </ItemGroup>
 </Project>

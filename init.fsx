@@ -1,4 +1,5 @@
 #r "nuget: MongoDB.Driver"
+#r "nuget: FsHttp"
 #load "src/Stockr/Stocks.fs"
 
 open stock
@@ -8,22 +9,12 @@ open locations
 
 #load "src/Stockr/Persistence.fs"
 open persistence
+open System.Net.Http
+open System
 
 let db = Open "mongodb://localhost:27017" "stockr"
-let stockCol = db.GetCollection<StockModel>("stocks")
-let stockRepo = StockRepo stockCol
-
-let stock = {
-    Id = "rrlaihbrdq"
-    Location = "10.00.01"
-    Material = "A" |> Material
-    Amount = (10 |> Quantity, "pcs" |> Unit)
-    Labels = Map []
-    Annotations = Map []
-}
-
-stockRepo.Create stock
-
+// let stockCol = db.GetCollection<StockModel>("stocks")
+let stockRepo = StockRepo "http://localhost:2379/v3/"
 
 // let newStock = {
 //     Id = "lkasdjwj"

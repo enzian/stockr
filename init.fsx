@@ -28,6 +28,7 @@ let stockRepo = StockRepo "http://localhost:2379/v3/"
 
 // stockRepo.Delete stock.Id
 // stockRepo.FindByLocation "lkasdjwj"
+stockRepo.FindByLocation "10.00.01"
 
 
 let locationCol = db.GetCollection<LocationModel>("locations")
@@ -51,6 +52,6 @@ locationRepo.FindByLabel ("location.stockr.io/v1alpha1/type", Eq "forklift")
 open logistics
 
 // MoveStock locationRepo stockRepo "lkasdjwj" "12.00.01"
-let moveQty = MoveQuantity locationRepo StockRepo
+let moveQty = MoveQuantity locationRepo stockRepo
 
 moveQty "x9e3drpvgn" "10.00.01" "A" (3 |> Quantity, "pcs" |> Unit)

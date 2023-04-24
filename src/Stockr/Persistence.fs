@@ -85,10 +85,6 @@ let DeleteStockRecord host (s: string) =
 let UpdateStockRecord = CreateStockRecord
 
 let FindStockRecordById host s =
-    sprintf "/locations/%s" s 
-        |> System.Text.Encoding.UTF8.GetBytes
-        |> Convert.ToBase64String
-        |> printfn "%s"
     try
         let resp =
             http {
@@ -120,22 +116,51 @@ let FindStockRecordById host s =
         Error ex.Message
 
 let FindStockByLocation host location : Result<seq<stock.Stock>, string> =
-    // try
-    //     let filter = Builders<StockModel>.Filter.Eq ((fun x -> x.Location), location)
+    let key = 
+        "/locations/"
+        |> System.Text.Encoding.UTF8.GetBytes
+    
+    let rec incLast arr = 
+        match arr with
+        | [x] when x = 0xffuy -> [0x00uy]
+        | [x] when x < 0xffuy -> [x + 1uy]
+        | head::tail -> head::(incLast tail)
 
-    //     Ok(
-    //         col.Find(filter).ToList() :> seq<StockModel>
-    //         |> Seq.map (fun x ->
-    //             { Id = x.Id
-    //               Location = x.Location
-    //               Material = x.Material |> Material
-    //               Amount = (x.Quantity |> Quantity, x.Unit |> Unit)
-    //               Labels = x.Labels |> toMap
-    //               Annotations = x.Annotations |> toMap })
-    //     )
-    // with ex ->
-    //     Error ex.Message
-    Ok ([] :> seq<stock.Stock>)
+    try
+        let resp =
+            http {
+                POST (sprintf "%skv/range" host)
+                body
+                jsonSerialize {|
+                    key = key |> Convert.ToBase64String
+                    range_end = key |> Array.toList |> incLast |> List.toArray |> Convert.ToBase64String
+                |}
+            }
+            |> Request.send
+            |> Response.assert2xx
+            |> Response.toJson
+            |> JsonSerializer.Deserialize<EtcdKvRange>
+        
+        match (resp.count, resp.kvs) with
+        | (Some c, Some kvs) when (c |> int) > 0 ->
+            let stocks = 
+                kvs
+                |> Array.map (fun x -> x.value |> Convert.FromBase64String |> JsonSerializer.Deserialize<StockModel>)
+                |> Array.filter (fun x -> x.Location = location)
+                |> Array.map (fun x ->
+                    {
+                    Id = x.Id
+                    Location = x.Location
+                    Material = x.Material |> Material
+                    Amount = (x.Quantity |> Quantity, x.Unit |> Unit)
+                    Labels = x.Labels
+                    Annotations = x.Annotations
+                    })
+            Ok stocks
+        | _  -> Ok []
+    with ex ->
+        Error ex.Message
+    // Ok ([] :> seq<stock.Stock>)
 
 type StockRepository =
     { Create: stock.Stock -> Result<unit, string>

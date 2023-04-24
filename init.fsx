@@ -1,36 +1,33 @@
-// #r "nuget: MongoDB.Driver"
-// #r "nuget: FsHttp"
+#r "nuget: dotnet-etcd"
 #load "src/Stockr/Stocks.fs"
+#load "src/Stockr/Locations.fs"
+#load "src/Stockr/Persistence.fs"
 
 open stock
-
-#load "src/Stockr/Locations.fs"
 open locations
-
-#load "src/Stockr/Persistence.fs"
 open persistence
-open System.Net.Http
-open System
+open dotnet_etcd
 
-// let db = Open "mongodb://localhost:27017" "stockr"
-// let stockCol = db.GetCollection<StockModel>("stocks")
-let stockRepo = StockRepo "http://localhost:2379/v3/"
+let etcdClient = new EtcdClient("https://localhost:2379")
 
-// let newStock = {
-//     Id = "lkasdjwj"
-//     Location = "1.02.011.0.L"
-//     Material = "A" |> Material
-//     Amount = (10 |> Quantity, "pcs" |> Unit)
-// }
-// stockRepo.Update newStock
+let stockRepo = StockRepo etcdClient
 
-// stockRepo.FindById "lkasdjwj"
+let newStock = {
+    Id = "lkasdjwj"
+    Location = "1.02.011.0.L"
+    Material = "A" |> Material
+    Amount = (10 |> Quantity, "pcs" |> Unit)
+    Labels = Map [||]
+    Annotations = Map [||]
+}
+stockRepo.Create newStock
 
-// stockRepo.Delete stock.Id
-// stockRepo.FindByLocation "lkasdjwj"
-stockRepo.FindByLocation "10.00.01"
+stockRepo.FindById "lkasdjwj"
+stockRepo.FindByLocation "1.02.011.0.L"
 
-let locationRepo = LocationRepo "http://localhost:2379/v3/"
+stockRepo.Delete newStock.Id
+
+let locationRepo = LocationRepo etcdClient
 
 let location1 = {
     Id = "13.00.01"
@@ -43,7 +40,7 @@ locationRepo.Create location1
 
 // locationRepo.Delete "lkasdjwj"
 
-// locationRepo.FindById "10.00.01"
+locationRepo.FindById "13.00.01"
 locationRepo.FindByLabel ("location.stockr.io/v1alpha1/type", Eq "forklift")
 
 #load "src/Stockr/Logistics.fs"

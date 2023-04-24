@@ -1,0 +1,15 @@
+#r "nuget: dotnet-etcd"
+#load "src/Stockr/Stocks.fs"
+#load "src/Stockr/Locations.fs"
+#load "src/Stockr/Persistence.fs"
+#load "src/Stockr/Controller.fs"
+open dotnet_etcd
+open controller
+
+let etcdClient = new EtcdClient("https://localhost:2379")
+
+let handler (curr: LocationModel) (prev: LocationModel) =
+    printfn "Handling %A %A" curr.Labels prev.Labels
+
+let (cts, task) =
+    runWatchOnPrefix<LocationModel> etcdClient handler "/locations/"

@@ -14,17 +14,6 @@ let Open (connStr: string) db =
     let client = new MongoClient(connStr)
     client.GetDatabase(db)
 
-let encodeKey (s: string) =
-    s.Replace("\\", "\\\\").Replace("$", "\\u0024").Replace(".", "\\u002e")
-
-let decodeKey (s: string) =
-    s.Replace("\\\\", "\\").Replace("\\u0024", "$").Replace("\\u002e", ".")
-
-let toMap (dic: System.Collections.Generic.IDictionary<_, _>) =
-    dic |> Seq.map (fun x -> (x.Key |> encodeKey, x.Value) ) |> Map.ofSeq
-let fromDict (dic: System.Collections.Generic.IDictionary<_, _>) =
-    dic |> Seq.map (fun x -> (x.Key |> decodeKey, x.Value) ) |> Map.ofSeq
-
 type StockModel(id: string, location, material, quantity, unit, labels, annotations) =
     member this.Id = id
     member this.Location = location
@@ -49,7 +38,7 @@ let CreateStockRecord host s =
                 POST (sprintf "%skv/put" host)
                 body
                 jsonSerialize {|
-                    key = sprintf "/locations/%s" s.Id 
+                    key = sprintf "/stocks/%s" s.Id 
                         |> System.Text.Encoding.UTF8.GetBytes
                         |> Convert.ToBase64String
                     value = JsonSerializer.Serialize stockModel 
@@ -72,7 +61,7 @@ let DeleteStockRecord host (s: string) =
                 POST (sprintf "%skv/deleterange" host)
                 body
                 jsonSerialize {|
-                    key = sprintf "/locations/%s" s 
+                    key = sprintf "/stocks/%s" s 
                         |> System.Text.Encoding.UTF8.GetBytes
                         |> Convert.ToBase64String
                 |}
@@ -91,7 +80,7 @@ let FindStockRecordById host s =
                 POST (sprintf "%skv/range" host)
                 body
                 jsonSerialize {|
-                    key = sprintf "/locations/%s" s 
+                    key = sprintf "/stocks/%s" s 
                         |> System.Text.Encoding.UTF8.GetBytes
                         |> Convert.ToBase64String
                 |}
@@ -117,7 +106,7 @@ let FindStockRecordById host s =
 
 let FindStockByLocation host location : Result<seq<stock.Stock>, string> =
     let key = 
-        "/locations/"
+        "/stocks/"
         |> System.Text.Encoding.UTF8.GetBytes
     
     let rec incLast arr = 
@@ -181,50 +170,95 @@ type LocationModel(id, labels, annotations) =
     member this.Labels = labels
     member this.Annotations = annotations
 
-let CreateLocation (col: IMongoCollection<LocationModel>) s =
+let CreateLocation host s =
     try
-        col.InsertOne(new LocationModel(s.Id, s.Labels |> toMap |> Map.toSeq |> dict, s.Annotations |> toMap |> Map.toSeq |> dict))
-        |> ignore
-
-        Ok()
+        let locationModel = new LocationModel(s.Id, s.Labels, s.Annotations)
+        
+        let resp =
+            http {
+                POST (sprintf "%skv/put" host)
+                body
+                jsonSerialize {|
+                    key = sprintf "/locations/%s" s.Id 
+                        |> System.Text.Encoding.UTF8.GetBytes
+                        |> Convert.ToBase64String
+                    value = JsonSerializer.Serialize locationModel 
+                        |> System.Text.Encoding.UTF8.GetBytes 
+                        |> Convert.ToBase64String
+                |}
+            }
+            |> Request.send
+        
+        match resp.statusCode with
+            | HttpStatusCode.OK -> Ok ()
+            | status -> Error (sprintf "Request to ETCD failed: %O" status)
+        
     with ex ->
         Error ex.Message
 
-let DeleteLocation (col: IMongoCollection<LocationModel>) (s: string) =
+let DeleteLocation host (s: string) =
     try
-        col.DeleteOne(fun x -> x.Id = s) |> ignore
-        Ok()
+        let resp =
+            http {
+                POST (sprintf "%skv/deleterange" host)
+                body
+                jsonSerialize {|
+                    key = sprintf "/locations/%s" s 
+                        |> System.Text.Encoding.UTF8.GetBytes
+                        |> Convert.ToBase64String
+                |}
+            }
+            |> Request.send
+        match resp.statusCode with
+            | HttpStatusCode.OK -> Ok ()
+            | status -> Error (sprintf "Request to ETCD failed: %O" status)
     with ex ->
         Error ex.Message
 
-let UpdateLocation (col: IMongoCollection<LocationModel>) s =
+let UpdateLocation = CreateLocation
+
+let FindLocationById host s =
+    let key = 
+        "/locations/"
+        |> System.Text.Encoding.UTF8.GetBytes
+    
+    let rec incLast arr = 
+        match arr with
+        | [x] when x = 0xffuy -> [0x00uy]
+        | [x] when x < 0xffuy -> [x + 1uy]
+        | head::tail -> head::(incLast tail)
+
     try
-        let filter = Builders<LocationModel>.Filter.Eq ((fun x -> x.Id), s.Id)
-
-        let model =
-            new LocationModel(s.Id, s.Labels |> toMap |> Map.toSeq |> dict, s.Annotations |> toMap |> Map.toSeq |> dict)
-
-        col.ReplaceOne(filter, model) |> ignore
-        Ok()
+        let resp =
+            http {
+                POST (sprintf "%skv/range" host)
+                body
+                jsonSerialize {|
+                    key = key |> Convert.ToBase64String
+                    range_end = key |> Array.toList |> incLast |> List.toArray |> Convert.ToBase64String
+                |}
+            }
+            |> Request.send
+            |> Response.assert2xx
+            |> Response.toJson
+            |> JsonSerializer.Deserialize<EtcdKvRange>
+        
+        match (resp.count, resp.kvs) with
+        | (Some c, Some kvs) when (c |> int) > 0 ->
+            let stocks = 
+                kvs
+                |> Array.map (fun x -> x.value |> Convert.FromBase64String |> JsonSerializer.Deserialize<StockModel>)
+                |> Array.filter (fun x -> x.Location = s)
+                |> Array.map (fun x ->
+                    {
+                    Id = x.Id
+                    Labels = x.Labels
+                    Annotations = x.Annotations
+                    })
+            Ok (Some (stocks |> Array.head))
+        | _  -> Ok None
     with ex ->
         Error ex.Message
-
-
-let FindLocationById (col: IMongoCollection<LocationModel>) s =
-    try
-        let filter = Builders<LocationModel>.Filter.Eq ((fun x -> x.Id), s)
-        let result = col.Find(filter).Limit(1).FirstOrDefault()
-
-        Ok(
-            Some(
-                { Id = result.Id
-                  Labels = result.Labels |> fromDict
-                  Annotations = result.Annotations |> fromDict }
-            )
-        )
-    with
-    | :? NullReferenceException -> Ok(None)
-    | ex -> Error ex.Message
 
 type Is = 
     | In of seq<string>
@@ -236,42 +270,65 @@ type Is =
 
 type KeyIs = (string * Is)
 
-let findByLabel (col: IMongoCollection<LocationModel>) (labelQuery : KeyIs) =
+let findByLabel host (labelQuery : KeyIs) : Result<Location array, string> =
+    let key = 
+        "/locations/"
+        |> System.Text.Encoding.UTF8.GetBytes
+    
+    let rec incLast arr = 
+        match arr with
+        | [x] when x = 0xffuy -> [0x00uy]
+        | [x] when x < 0xffuy -> [x + 1uy]
+        | head::tail -> head::(incLast tail)
+
     try
-        let filter =
-            match labelQuery with
-            | (k, Eq v ) ->  Builders<LocationModel>.Filter.Eq ((sprintf "Labels.%s" (encodeKey k)), v)
-            | (k, NotEq v ) ->  Builders<LocationModel>.Filter.Not (
-                    Builders<LocationModel>.Filter.Eq ((sprintf "Labels.%s" k), (encodeKey k)))
-            | (k, Set) -> Builders<LocationModel>.Filter.Exists (sprintf "Labels.%s" (encodeKey k))
-            | (k, NotSet) -> Builders<LocationModel>.Filter.Not (
-                Builders<LocationModel>.Filter.Exists (sprintf "Labels.%s" (encodeKey k)))
-            | (k, In values) -> Builders<LocationModel>.Filter.In ((sprintf "Labels.%s" (encodeKey k)), values)
-            | (k, NotIn values) -> Builders<LocationModel>.Filter.Not (
-                Builders<LocationModel>.Filter.In ((sprintf "Labels.%s" (encodeKey k)), values))
-
-        let results = col.Find(filter).ToList()
-
-        Ok(
-            Some( [for result in results ->
-                    { Id = result.Id
-                      Labels = result.Labels |> fromDict
-                      Annotations = result.Annotations |> fromDict }
-                ]
-            )
-        )
-    with
-    | :? NullReferenceException -> Ok(None)
-    | ex -> Error ex.Message
+        let resp =
+            http {
+                POST (sprintf "%skv/range" host)
+                body
+                jsonSerialize {|
+                    key = key |> Convert.ToBase64String
+                    range_end = key |> Array.toList |> incLast |> List.toArray |> Convert.ToBase64String
+                |}
+            }
+            |> Request.send
+            |> Response.assert2xx
+            |> Response.toJson
+            |> JsonSerializer.Deserialize<EtcdKvRange>
+        
+        match (resp.count, resp.kvs) with
+        | (Some c, Some kvs) when (c |> int) > 0 ->
+            let stocks = 
+                kvs
+                |> Array.map (fun x -> x.value |> Convert.FromBase64String |> JsonSerializer.Deserialize<LocationModel>)
+                |> Array.filter (fun x ->
+                    match labelQuery with
+                    | (k, Eq v ) -> x.Labels.ContainsKey(k) && x.Labels.Item(k) = v
+                    | (k, NotEq v ) -> x.Labels.ContainsKey(k) && x.Labels.Item(k) <> v
+                    | (k, Set) -> x.Labels.ContainsKey(k)
+                    | (k, NotSet) -> not (x.Labels.ContainsKey(k))
+                    | (k, In values) -> x.Labels.ContainsKey(k) && values |> Seq.contains (x.Labels.Item(k))
+                    | (k, NotIn values) -> x.Labels.ContainsKey(k) && values |> Seq.contains(x.Labels.Item(k)) |> not
+                    )
+                |> Array.map (fun x ->
+                    {
+                    Id = x.Id
+                    Labels = x.Labels
+                    Annotations = x.Annotations
+                    })
+            Ok stocks
+        | _  -> Ok [||]
+    with ex ->
+        Error ex.Message
 
 type LocationRepository =
     { Create: locations.Location -> Result<unit, string>
       Delete: string -> Result<unit, string>
       Update: locations.Location -> Result<unit, string>
       FindById: string -> Result<Option<locations.Location>, string>
-      FindByLabel: KeyIs -> Result<Option<locations.Location list>, string> }
+      FindByLabel: KeyIs -> Result<locations.Location array, string> }
 
-let LocationRepo (col: IMongoCollection<LocationModel>) =
+let LocationRepo col =
     { Create = CreateLocation col
       Delete = DeleteLocation col
       Update = UpdateLocation col

@@ -1,5 +1,5 @@
-#r "nuget: MongoDB.Driver"
-#r "nuget: FsHttp"
+// #r "nuget: MongoDB.Driver"
+// #r "nuget: FsHttp"
 #load "src/Stockr/Stocks.fs"
 
 open stock
@@ -12,7 +12,7 @@ open persistence
 open System.Net.Http
 open System
 
-let db = Open "mongodb://localhost:27017" "stockr"
+// let db = Open "mongodb://localhost:27017" "stockr"
 // let stockCol = db.GetCollection<StockModel>("stocks")
 let stockRepo = StockRepo "http://localhost:2379/v3/"
 
@@ -30,9 +30,7 @@ let stockRepo = StockRepo "http://localhost:2379/v3/"
 // stockRepo.FindByLocation "lkasdjwj"
 stockRepo.FindByLocation "10.00.01"
 
-
-let locationCol = db.GetCollection<LocationModel>("locations")
-let locationRepo = LocationRepo locationCol
+let locationRepo = LocationRepo "http://localhost:2379/v3/"
 
 let location1 = {
     Id = "13.00.01"

@@ -14,7 +14,7 @@ let stockRepo = StockRepo etcdClient
 
 let newStock = {
     Id = "lkasdjwj"
-    Location = "1.02.011.0.L"
+    Location = "13.00.02"
     Material = "A" |> Material
     Amount = (10 |> Quantity, "pcs" |> Unit)
     Labels = Map [||]
@@ -37,6 +37,12 @@ let location1 = {
     Annotations = Map [("location.stockr.io/zonetype", "forklift")]
 }
 locationRepo.Create location1
+let location2 = {
+    Id = "13.00.02"
+    Labels = Map []
+    Annotations = Map []
+}
+locationRepo.Create location2
 
 // locationRepo.Delete "lkasdjwj"
 

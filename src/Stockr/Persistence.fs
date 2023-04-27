@@ -66,9 +66,6 @@ let FindStockByLocation (client: EtcdClient) location =
         let locations = 
             range.Kvs
             |> Seq.map (fun x -> x.Value.ToStringUtf8())
-            |> (fun x ->
-                printfn "Got: %A" x
-                x)
             |> Seq.map JsonSerializer.Deserialize<StockModel>
             |> Seq.filter (fun x -> x.Location = location)
             |> Seq.map (fun x -> {
@@ -148,7 +145,6 @@ let FindLocationById (client: EtcdClient) s =
         Error ex.Message
 
 let findByLabel (client: EtcdClient) (labelQuery : KeyIs) : Result<Location seq, string> =
-    
     try
         let range = client.GetRange("/locations/")
 
@@ -156,9 +152,6 @@ let findByLabel (client: EtcdClient) (labelQuery : KeyIs) : Result<Location seq,
             let stocks = 
                 range.Kvs
                 |> Seq.map (fun x -> x.Value.ToStringUtf8())
-                |> (fun x ->
-                    printfn "Got: %A" x
-                    x)
                 |> Seq.map JsonSerializer.Deserialize<LocationModel>
                 |> Seq.filter (fun x ->
                     match labelQuery with

@@ -25,14 +25,16 @@ type Quantity =
     static member (-)(Quantity (left), Quantity (right)) = left - right |> Quantity
 
 
-type Amount = Quantity * Unit
+type Amount = {
+    qty: Quantity
+    unit: Unit
+}
 
-type Stock =
-    { Id: string
+type Stock = 
+    {
       Location: string
       Material: Material
       Amount: Amount 
-      Labels: Map<string, string>
-      Annotations: Map<string, string>}
+    }
 
 type CreateStock = Stock -> bool

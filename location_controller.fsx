@@ -8,13 +8,14 @@ open controller
 open System.Threading
 open persistence
 open System.Text.Json
+open locations
 
 let etcdClient = new EtcdClient("https://localhost:2379")
 
-let handler (curr: LocationModel) (prev: LocationModel) =
-    printfn "Handling %A %A" (curr |> JsonSerializer.Serialize) (prev.Id |> JsonSerializer.Serialize)
+let handler (curr: SpecType<Location>) (prev: SpecType<Location>) =
+    printfn "Handling %A %A" (curr |> JsonSerializer.Serialize) (prev.spec.Id |> JsonSerializer.Serialize)
 
 let cts = new CancellationTokenSource()
 
-runWatchOnPrefix<LocationModel> etcdClient handler "/locations/" cts
+runWatchOnPrefix<SpecType<Location>> etcdClient handler "/locations/" cts
     |> Async.RunSynchronously

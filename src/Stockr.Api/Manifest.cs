@@ -9,7 +9,7 @@ public class Metadata {
 
 public class Manifest
 {
-    public string? ApiVerion { get; set; }
+    public string? ApiVersion { get; set; }
     public string? ApiGroup { get; set; }
     public string? Kind { get; set; }
     public Metadata? Metadata { get; set; }

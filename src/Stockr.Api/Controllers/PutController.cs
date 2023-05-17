@@ -35,6 +35,10 @@ public class ManifestController : ControllerBase
             return StatusCode(StatusCodes.Status422UnprocessableEntity, "Metadata.Name missing or empty");
         }
 
+        manifest.ApiGroup = group;
+        manifest.ApiVersion = version;
+        manifest.Kind = kind;
+
         var etcdKey = Path.Combine(
             "/registry",
             DerriveEtcdKeyFromKind(new ManifestRevision(group, version, kind)),
@@ -47,12 +51,46 @@ public class ManifestController : ControllerBase
         }
         catch (Exception e)
         {
-            return StatusCode(StatusCodes.Status500InternalServerError, e.Message);
+            _logger.LogError(e, "Failed to put resource mainfest to etcd.");
+            return StatusCode(StatusCodes.Status500InternalServerError, "Failed to persist the given manifest.");
         }
 
         return Ok();
     }
 
+    [HttpGet("{name}", Name = "GetResourceByName")]
+    public async Task<IActionResult> GetManifestByName(
+        string group,
+        string version,
+        string kind,
+        string name,
+        CancellationToken cancellationToken)
+    {
+        var keySpace = DerriveEtcdKeyFromKind(new ManifestRevision(group, version, kind));
+        if (string.IsNullOrWhiteSpace(keySpace)) { return NotFound($"no resource type know for group: {group}, version: {version}, kind: {kind}"); }
+
+        var etcdKey = Path.Combine(
+            "/registry",
+            DerriveEtcdKeyFromKind(new ManifestRevision(group, version, kind)),
+            name);
+        try
+        {
+            var result = await _etcdClient.GetAsync(etcdKey);
+            if (result.Count < 1)
+            {
+                return NotFound();
+            }
+
+            var value = result.Kvs.First().Value.ToStringUtf8();
+            var manifest = JsonSerializer.Deserialize<Manifest>(value);
+            return Ok(manifest);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, $"Failed to get resource {etcdKey}");
+            return StatusCode(StatusCodes.Status500InternalServerError, "Failed to read the given manifest.");
+        }
+    }
 
     private static string DerriveEtcdKeyFromKind(ManifestRevision revision) =>
         revision switch

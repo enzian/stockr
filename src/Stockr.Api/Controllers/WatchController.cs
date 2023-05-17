@@ -48,7 +48,8 @@ public class WatchController : ControllerBase
                     {
                         Key = dotnet_etcd.EtcdClient.GetStringByteForRangeRequests(etcdKey),
                         RangeEnd = ByteString.CopyFromUtf8(dotnet_etcd.EtcdClient.GetRangeEnd(etcdKey)),
-                        ProgressNotify = true
+                        ProgressNotify = true,
+                        StartRevision = start_revision != null ? long.Parse(start_revision) : 0 
                     }
                 },
                 async (WatchResponse resposne) =>

@@ -3,11 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{5362F5B0-D0C9-44EC-ACCD-D8B4BDCDED9B}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{A3EB66C6-CCA7-45F4-823B-E3F1B00CE913}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Stockr", "src\Stockr\Stockr.fsproj", "{70FC6CEC-C3C5-4F45-8F32-742ABD88FE38}"
-EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Stockr.Api", "src\Stockr.Api\Stockr.Api.fsproj", "{F033B9B9-5CA1-4499-9F2F-7C24419E94AA}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Stockr.Api", "src\Stockr.Api\Stockr.Api.csproj", "{0990E734-DCA6-4327-8B1E-21EA12BFC407}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -18,17 +16,12 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{70FC6CEC-C3C5-4F45-8F32-742ABD88FE38}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{70FC6CEC-C3C5-4F45-8F32-742ABD88FE38}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{70FC6CEC-C3C5-4F45-8F32-742ABD88FE38}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{70FC6CEC-C3C5-4F45-8F32-742ABD88FE38}.Release|Any CPU.Build.0 = Release|Any CPU
-		{F033B9B9-5CA1-4499-9F2F-7C24419E94AA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{F033B9B9-5CA1-4499-9F2F-7C24419E94AA}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{F033B9B9-5CA1-4499-9F2F-7C24419E94AA}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{F033B9B9-5CA1-4499-9F2F-7C24419E94AA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0990E734-DCA6-4327-8B1E-21EA12BFC407}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0990E734-DCA6-4327-8B1E-21EA12BFC407}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0990E734-DCA6-4327-8B1E-21EA12BFC407}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0990E734-DCA6-4327-8B1E-21EA12BFC407}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{70FC6CEC-C3C5-4F45-8F32-742ABD88FE38} = {5362F5B0-D0C9-44EC-ACCD-D8B4BDCDED9B}
-		{F033B9B9-5CA1-4499-9F2F-7C24419E94AA} = {5362F5B0-D0C9-44EC-ACCD-D8B4BDCDED9B}
+		{0990E734-DCA6-4327-8B1E-21EA12BFC407} = {A3EB66C6-CCA7-45F4-823B-E3F1B00CE913}
 	EndGlobalSection
 EndGlobal

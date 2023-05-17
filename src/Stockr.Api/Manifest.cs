@@ -15,3 +15,9 @@ public class Manifest
     public Metadata? Metadata { get; set; }
     public dynamic? Spec { get; set; }
 }
+
+public class WatchEvent
+{
+    public string Type { get; set; }
+    public Manifest Object { get; set; }
+}

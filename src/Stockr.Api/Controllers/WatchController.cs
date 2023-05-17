@@ -1,7 +1,9 @@
 using System.Text.Json;
 using dotnet_etcd.interfaces;
 using Etcdserverpb;
+using Google.Protobuf;
 using Microsoft.AspNetCore.Mvc;
+using static Mvccpb.Event.Types;
 
 namespace Stockr.Api.Controllers;
 
@@ -23,6 +25,7 @@ public class WatchController : ControllerBase
         string group,
         string version,
         string kind,
+        string? start_revision,
         CancellationToken cancellationToken)
     {
         var context = HttpContext;
@@ -38,30 +41,45 @@ public class WatchController : ControllerBase
             context.Response.StatusCode = 200;
             context.Response.ContentType = "text/event-stream";
 
-            await _etcdClient.WatchRangeAsync(etcdKey, async (WatchResponse resposne) =>
-            {
-                var revision = resposne.Header.Revision;
-                foreach (var e in resposne.Events)
+            await _etcdClient.WatchAsync(
+                new WatchRequest
                 {
-                    var manifest = JsonSerializer.Deserialize<Manifest>(e.Kv.Value.ToStringUtf8());
-                    if (manifest?.Metadata != null)
+                    CreateRequest = new WatchCreateRequest
                     {
-                        manifest.Metadata.Revision = revision.ToString();
+                        Key = dotnet_etcd.EtcdClient.GetStringByteForRangeRequests(etcdKey),
+                        RangeEnd = ByteString.CopyFromUtf8(dotnet_etcd.EtcdClient.GetRangeEnd(etcdKey)),
+                        ProgressNotify = true
                     }
-                    else if (manifest != null)
+                },
+                async (WatchResponse resposne) =>
+                {
+                    var revision = resposne.Header.Revision;
+                    foreach (var e in resposne.Events)
                     {
-                        manifest.Metadata = new Metadata { Revision = revision.ToString() };
+                        var manifest = JsonSerializer.Deserialize<Manifest>(e.Kv.Value.ToStringUtf8());
+                        if (manifest?.Metadata != null)
+                        {
+                            manifest.Metadata.Revision = revision.ToString();
+                        }
+                        else if (manifest != null)
+                        {
+                            manifest.Metadata = new Metadata { Revision = revision.ToString() };
+                        }
+
+                        var watchEvent = e switch
+                        {
+                            { Type: EventType.Put, Kv.Version: 1 } => new WatchEvent { Type = "ADDED", Object = manifest },
+                            { Type: EventType.Put, Kv.Version: >1 } => new WatchEvent { Type = "MODIFIED", Object = manifest },
+                            { Type: EventType.Delete } => new WatchEvent { Type = "DELETED", Object = manifest },
+                        };
+
+                        await context.Response.WriteAsync($"{JsonSerializer.Serialize(watchEvent)}{Environment.NewLine}");
                     }
 
-                    await context.Response.WriteAsync($"{JsonSerializer.Serialize(manifest)}{Environment.NewLine}");
-                }
-
-
-                // await context.Response.WriteAsync($"{dgram}\n", cancellationToken);
-                // await context.Response.WriteAsJsonAsync(events, cancellationToken);
-                await context.Response.Body.FlushAsync();
-                // Console.WriteLine($"Flushed {dgram}");
-            }, cancellationToken: cancellationToken);
+                    await context.Response.Body.FlushAsync();
+                },
+                new Grpc.Core.Metadata(),
+                cancellationToken: cancellationToken);
 
             return Ok();
         }

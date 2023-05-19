@@ -92,6 +92,39 @@ public class ManifestController : ControllerBase
         }
     }
 
+    
+    [HttpGet("{name}", Name = "GetResourceByName")]
+    public async Task<IActionResult> ListManifestsByKind(
+        string group,
+        string version,
+        string kind,
+        CancellationToken cancellationToken)
+    {
+        var keySpace = DerriveEtcdKeyFromKind(new ManifestRevision(group, version, kind));
+        if (string.IsNullOrWhiteSpace(keySpace)) { return NotFound($"no resource type know for group: {group}, version: {version}, kind: {kind}"); }
+
+        var etcdKey = Path.Combine(
+            "/registry",
+            DerriveEtcdKeyFromKind(new ManifestRevision(group, version, kind)));
+        try
+        {
+            var result = await _etcdClient.GetAsync(etcdKey);
+            if (result.Count < 1)
+            {
+                return NotFound();
+            }
+
+            var value = result.Kvs.First().Value.ToStringUtf8();
+            var manifest = JsonSerializer.Deserialize<Manifest>(value);
+            return Ok(manifest);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, $"Failed to get resource {etcdKey}");
+            return StatusCode(StatusCodes.Status500InternalServerError, "Failed to read the given manifest.");
+        }
+    }
+
     private static string DerriveEtcdKeyFromKind(ManifestRevision revision) =>
         revision switch
         {

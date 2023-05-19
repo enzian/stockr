@@ -21,7 +21,7 @@ public class WatchController : ControllerBase
     }
 
     [HttpGet(Name = "WatchResourceKind")]
-    public async Task<IActionResult> GetManifestByName(
+    public async Task<IActionResult> WatchResourceKind(
         string group,
         string version,
         string kind,

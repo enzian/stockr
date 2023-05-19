@@ -3,6 +3,7 @@ using dotnet_etcd.interfaces;
 using Etcdserverpb;
 using Google.Protobuf;
 using Microsoft.AspNetCore.Mvc;
+using Stockr.Api.Utilities;
 using static Mvccpb.Event.Types;
 
 namespace Stockr.Api.Controllers;
@@ -29,12 +30,12 @@ public class WatchController : ControllerBase
         CancellationToken cancellationToken)
     {
         var context = HttpContext;
-        var keySpace = DerriveEtcdKeyFromKind(new ManifestRevision(group, version, kind));
+        var keySpace = EtcdKeyUtilities.KeyFromKind(new ManifestRevision(group, version, kind));
         if (string.IsNullOrWhiteSpace(keySpace)) { return NotFound($"no resource type know for group: {group}, version: {version}, kind: {kind}"); }
 
         var etcdKey = Path.Combine(
             "/registry",
-            DerriveEtcdKeyFromKind(new ManifestRevision(group, version, kind)));
+            EtcdKeyUtilities.KeyFromKind(new ManifestRevision(group, version, kind)));
 
         try
         {
@@ -91,11 +92,4 @@ public class WatchController : ControllerBase
         }
     }
 
-    private static string DerriveEtcdKeyFromKind(ManifestRevision revision) =>
-        revision switch
-        {
-            ("stocks.stockr.io", _, "stock") => "stocks/",
-            ("stocks.stockr.io", _, "stocks") => "stocks/",
-            _ => ""
-        };
 }

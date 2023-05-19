@@ -1,6 +1,7 @@
 using System.Text.Json;
 using dotnet_etcd.interfaces;
 using Microsoft.AspNetCore.Mvc;
+using Stockr.Api.Utilities;
 
 namespace Stockr.Api.Controllers;
 
@@ -24,13 +25,13 @@ public class ListController : ControllerBase
         string kind,
         CancellationToken cancellationToken)
     {
-        var keySpace = DerriveEtcdKeyFromKind(new ManifestRevision(group, version, kind));
+        var keySpace = EtcdKeyUtilities.KeyFromKind(new ManifestRevision(group, version, kind));
         if (string.IsNullOrWhiteSpace(keySpace)) { return NotFound(); }
 
 
         var etcdKey = Path.Combine(
             "/registry",
-            DerriveEtcdKeyFromKind(new ManifestRevision(group, version, kind)));
+            EtcdKeyUtilities.KeyFromKind(new ManifestRevision(group, version, kind)));
         try
         {
             var rangeResponse = await _etcdClient.GetRangeAsync(etcdKey, cancellationToken: cancellationToken);
@@ -51,12 +52,4 @@ public class ListController : ControllerBase
             return StatusCode(StatusCodes.Status500InternalServerError, "Failed to persist the given manifest.");
         }
     }
-
-    private static string DerriveEtcdKeyFromKind(ManifestRevision revision) =>
-        revision switch
-        {
-            ("stocks.stockr.io", _, "stock") => "stocks/",
-            ("stocks.stockr.io", _, "stocks") => "stocks/",
-            _ => ""
-        };
 }

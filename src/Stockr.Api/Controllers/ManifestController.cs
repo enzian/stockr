@@ -1,10 +1,10 @@
 using System.Text.Json;
 using dotnet_etcd.interfaces;
 using Microsoft.AspNetCore.Mvc;
+using Stockr.Api.Utilities;
 
 namespace Stockr.Api.Controllers;
 
-record ManifestRevision(string group, string version, string kind);
 
 [ApiController]
 [Route("apis/{group}/{version}/{kind}")]

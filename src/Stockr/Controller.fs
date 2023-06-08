@@ -1,26 +1,58 @@
 module controller
+
 open System.Threading
-open dotnet_etcd
-open Etcdserverpb
-open System
-open System.Text
+open System.Net.Http
+open System.IO
 open System.Text.Json
 
-let runWatchOnPrefix<'a> (client: EtcdClient) (handler) (range: string) (cts: CancellationTokenSource) =
-    async {
-        let handlerFunction (response: WatchResponse) = 
-            match response with
-            | r when r.Canceled = true -> cts.Cancel()
-            | r when r.Events.Count > 0 ->
-                for event in r.Events do
-                    let curr =
-                        event.Kv.Value.ToStringUtf8()
-                        |> JsonSerializer.Deserialize<'a>
-                    let prev =
-                        event.PrevKv.Value.ToStringUtf8()
-                        |> JsonSerializer.Deserialize<'a>
-                    handler curr prev
-            | r -> printfn "No action on: %A" r
+type Metadata =
+    { name: string
+      ``namespace``: string option
+      labels: Map<string, string>
+      annotations: Map<string, string>
+      revision: string }
 
-        client.WatchRangeAsync(range, Action<_>(handlerFunction), ?cancellationToken = Some cts.Token) |> Async.AwaitTask |> ignore
+type TestSpec = { A: string }
+
+type Manifest<'T> =
+    { kind: string
+      apigroup: string
+      apiversion: string
+      metadata: Metadata
+      spec: 'T }
+
+type Event<'T> =
+    | Update of Manifest<'T>
+    | Create of Manifest<'T>
+    | Delete of Manifest<'T>
+
+type WireEvent<'T> = {
+    ``type``: string
+    object: Manifest<'T>
+}
+
+
+let jsonOptions = new JsonSerializerOptions()
+jsonOptions.PropertyNameCaseInsensitive <- true
+
+let watchResource<'T> (client: HttpClient) uri (handler) (cts: CancellationToken) =
+    async {
+        let! responseSteam =
+            client.GetStreamAsync(Path.Combine("apis/watch/", uri))
+            |> Async.AwaitTask
+
+        let streamReader = new StreamReader(responseSteam)
+
+        while (not streamReader.EndOfStream) && (not cts.IsCancellationRequested) do
+            let! line = streamReader.ReadLineAsync() |> Async.AwaitTask
+            let wireEvent = JsonSerializer.Deserialize<WireEvent<'T>> (line, jsonOptions)
+            printfn "Type: %A" wireEvent
+            let event =
+                match wireEvent.``type`` with
+                | "MODIFIED" -> Update wireEvent.object
+                | "ADDED" -> Create wireEvent.object
+                | "DELETED" -> Delete wireEvent.object
+                | _ -> Update wireEvent.object
+
+            do! handler event
     }

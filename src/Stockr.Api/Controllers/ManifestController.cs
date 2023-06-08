@@ -75,14 +75,22 @@ public class ManifestController : ControllerBase
             name);
         try
         {
-            var result = await _etcdClient.GetAsync(etcdKey);
-            if (result.Count < 1)
+            var etcdResult = await _etcdClient.GetAsync(etcdKey);
+            if (etcdResult.Count < 1)
             {
                 return NotFound();
             }
 
-            var value = result.Kvs.First().Value.ToStringUtf8();
+            var result = etcdResult.Kvs.First();
+            var value = result.Value.ToStringUtf8();
+
             var manifest = JsonSerializer.Deserialize<Manifest>(value);
+
+            if(manifest?.Metadata is null){
+                manifest.Metadata = new Metadata();
+            }
+            manifest.Metadata.Revision = Math.Max(result.ModRevision, result.CreateRevision).ToString();
+
             return Ok(manifest);
         }
         catch (Exception e)
@@ -91,13 +99,13 @@ public class ManifestController : ControllerBase
             return StatusCode(StatusCodes.Status500InternalServerError, "Failed to read the given manifest.");
         }
     }
-
     
-    [HttpGet("{name}", Name = "GetResourceByName")]
-    public async Task<IActionResult> ListManifestsByKind(
+    [HttpDelete("{name}", Name = "DeleteResourceByName")]
+    public async Task<IActionResult> DeleteManifestByName(
         string group,
         string version,
         string kind,
+        string name,
         CancellationToken cancellationToken)
     {
         var keySpace = DerriveEtcdKeyFromKind(new ManifestRevision(group, version, kind));
@@ -105,17 +113,26 @@ public class ManifestController : ControllerBase
 
         var etcdKey = Path.Combine(
             "/registry",
-            DerriveEtcdKeyFromKind(new ManifestRevision(group, version, kind)));
+            DerriveEtcdKeyFromKind(new ManifestRevision(group, version, kind)),
+            name);
         try
         {
-            var result = await _etcdClient.GetAsync(etcdKey);
-            if (result.Count < 1)
+            var etcdResult = await _etcdClient.GetAsync(etcdKey);
+            if (etcdResult.Count < 1)
             {
                 return NotFound();
             }
 
-            var value = result.Kvs.First().Value.ToStringUtf8();
+            var result = etcdResult.Kvs.First();
+            var value = result.Value.ToStringUtf8();
+
             var manifest = JsonSerializer.Deserialize<Manifest>(value);
+
+            if(manifest?.Metadata is null){
+                manifest.Metadata = new Metadata();
+            }
+            manifest.Metadata.Revision = Math.Max(result.ModRevision, result.CreateRevision).ToString();
+            
             return Ok(manifest);
         }
         catch (Exception e)
@@ -124,7 +141,7 @@ public class ManifestController : ControllerBase
             return StatusCode(StatusCodes.Status500InternalServerError, "Failed to read the given manifest.");
         }
     }
-
+    
     private static string DerriveEtcdKeyFromKind(ManifestRevision revision) =>
         revision switch
         {

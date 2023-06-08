@@ -39,7 +39,7 @@ public class WatchController : ControllerBase
 
         try
         {
-            context.Response.StatusCode = 200;
+            context.Response.StatusCode = StatusCodes.Status200OK;
             context.Response.ContentType = "text/event-stream";
 
             await _etcdClient.WatchAsync(

@@ -20,9 +20,10 @@ public class ListController : ControllerBase
 
     [HttpGet(Name = "ListResourceManifests")]
     public async Task<IActionResult> ListResourceManifests(
-        string group,
-        string version,
-        string kind,
+        [FromRoute] string group,
+        [FromRoute] string version,
+        [FromRoute] string kind,
+        [FromQuery] string? filter,
         CancellationToken cancellationToken)
     {
         var keySpace = EtcdKeyUtilities.KeyFromKind(new ManifestRevision(group, version, kind));
@@ -42,6 +43,8 @@ public class ListController : ControllerBase
                 }
                 manifest.Metadata.Revision = Math.Max(x.ModRevision, x.CreateRevision).ToString();
                 return manifest;
+            }).Where(x => {
+                return true;
             });
             
             return Ok(manifests);            

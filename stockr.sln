@@ -7,6 +7,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{A3EB66C6-CCA
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Stockr.Api", "src\Stockr.Api\Stockr.Api.csproj", "{0990E734-DCA6-4327-8B1E-21EA12BFC407}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Stockr", "src\Stockr\Stockr.fsproj", "{3FD3D25B-CEEA-4FA7-8104-1EFB7DBAD25E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Stockr.Api.Test", "src\Stockr.Api.Test\Stockr.Api.Test.csproj", "{068B61D3-9A93-487F-8432-447A5B97BE7D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -20,8 +24,18 @@ Global
 		{0990E734-DCA6-4327-8B1E-21EA12BFC407}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0990E734-DCA6-4327-8B1E-21EA12BFC407}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0990E734-DCA6-4327-8B1E-21EA12BFC407}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3FD3D25B-CEEA-4FA7-8104-1EFB7DBAD25E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3FD3D25B-CEEA-4FA7-8104-1EFB7DBAD25E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3FD3D25B-CEEA-4FA7-8104-1EFB7DBAD25E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3FD3D25B-CEEA-4FA7-8104-1EFB7DBAD25E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{068B61D3-9A93-487F-8432-447A5B97BE7D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{068B61D3-9A93-487F-8432-447A5B97BE7D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{068B61D3-9A93-487F-8432-447A5B97BE7D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{068B61D3-9A93-487F-8432-447A5B97BE7D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{0990E734-DCA6-4327-8B1E-21EA12BFC407} = {A3EB66C6-CCA7-45F4-823B-E3F1B00CE913}
+		{3FD3D25B-CEEA-4FA7-8104-1EFB7DBAD25E} = {A3EB66C6-CCA7-45F4-823B-E3F1B00CE913}
+		{068B61D3-9A93-487F-8432-447A5B97BE7D} = {A3EB66C6-CCA7-45F4-823B-E3F1B00CE913}
 	EndGlobalSection
 EndGlobal

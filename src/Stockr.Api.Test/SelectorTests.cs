@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using FluentAssertions;
 
 public class SelectorTests
@@ -77,18 +78,16 @@ public class SelectorTests
     }
     
     [Theory]
-    [InlineData("test notin (1,2,3)", "test", new [] {"1", "2", "3"})]
-    [InlineData("test notin ( 1, 2, 3 3)", "test", new [] {"1", "2", "3 3"})]
-    [InlineData("test notin (none, any)", "test", new [] {"none", "any"})]
-    public void ParseTest_WithNotInSetOperator(string selector, string key, string[] value)
+    [InlineData("foo in (1,2,3)", "foo=bar,sna=foo", false)]
+    [InlineData("foo in (bar, baz)", "foo=bar,sna=foo", true)]
+    [InlineData("foo in (bar)", "foo=bar,sna=foo", true)]
+    
+    public void ParseTest_Validation(string selector, string dictionary, bool shouldMatch)
     {
-        var sel = Selectors.TryParseSelector(selector);
-
-        if(sel is Selector.NotInSet s){
-            s.key.Should().BeEquivalentTo(key);
-            s.values.Should().BeEquivalentTo(value);
-        } else {
-            Assert.Fail("Selector was not of type NotInSet");
-        }
+        
+        var dict = dictionary.Split(",").Select(x => x.Split("=")).ToDictionary(x => x[0], x => x[1]);
+        var sel = Selectors.TryParse(selector);
+        
+        Selectors.Validate(sel, dict).Should().Be(shouldMatch);
     }
 }

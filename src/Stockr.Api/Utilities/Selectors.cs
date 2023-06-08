@@ -15,12 +15,12 @@ public record Selector
 
 public static class Selectors
 {
-    private static Regex unequalRegex = new Regex(@"(?<key>\w+)\s*!=\s*(?<value>\w+)");
-    private static Regex equalRegex = new Regex(@"(?<key>\w+)\s*=\s*(?<value>\w+)");
-    private static Regex inRegex = new Regex(@"(?<key>\w+)\s+in\s*\((?<value>[\w\s,]*)\)");
-    private static Regex notinRegex = new Regex(@"(?<key>\w+)\s*notin\s*\((?<value>[\w\s,]*)\)");
-    private static Regex existsRegex = new Regex(@"^\s*(?<key>\w+)");
-    private static Regex notexistsRegex = new Regex(@"!\s*(?<key>\w+)");
+    private static Regex unequalRegex = new Regex(@"(?<key>\S+)\s*!=\s*(?<value>\w+)");
+    private static Regex equalRegex = new Regex(@"(?<key>\S+)\s*=\s*(?<value>\w+)");
+    private static Regex inRegex = new Regex(@"(?<key>\S+)\s+in\s*\((?<value>[\w\s,]*)\)");
+    private static Regex notinRegex = new Regex(@"(?<key>\S+)\s*notin\s*\((?<value>[\w\s,]*)\)");
+    private static Regex existsRegex = new Regex(@"^\s*(?<key>[^\r\n\t\f\v\s!]+)");
+    private static Regex notexistsRegex = new Regex(@"!\s*(?<key>\S+)");
     private static Regex splitRegex = new Regex(@"(?![^)(]*\([^)(]*?\)\)),(?![^\(]*\))");
 
     public static Selector TryParseSelector(string selector)
@@ -89,9 +89,10 @@ public static class Selectors
             Selector.Equality sel => labels.ContainsKey(sel.key) && labels[sel.key] == sel.value,
             Selector.Inequality sel => labels.ContainsKey(sel.key) && labels[sel.key] != sel.value,
             Selector.InSet sel => labels.ContainsKey(sel.key) && sel.values.Any(x => x == labels[sel.key]),
-            Selector.NotInSet sel => labels.ContainsKey(sel.key) && sel.values.Any(x => x != labels[sel.key]),
+            Selector.NotInSet sel => labels.ContainsKey(sel.key) && sel.values.All(x => x != labels[sel.key]),
             Selector.Exists sel => labels.ContainsKey(sel.key),
             Selector.NotExists sel => !labels.ContainsKey(sel.key),
+            Selector.None => true,
             _ => false
         }).All(x => x == true);
     }

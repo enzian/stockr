@@ -6,6 +6,7 @@ public class SelectorTests
     [Theory]
     [InlineData("test=none", "test", "none")]
     [InlineData(" test = none ", "test", "none")]
+    [InlineData("test.uri.org/key=notempty ", "test.uri.org/key", "notempty")]
     public void ParseTest_WithEqualityOperators(string selector, string key, string value)
     {
         var sel = Selectors.TryParseSelector(selector);
@@ -77,6 +78,20 @@ public class SelectorTests
         }
     }
     
+    [Theory]
+    [InlineData("test notin (1,2,3)", "test", new [] {"1","2", "3"})]
+    [InlineData("test notin (none, any)", "test", new [] {"none", "any"})]
+    public void ParseTest_WithNotInSetOperator(string selector, string key, string[] value)
+    {
+        var sel = Selectors.TryParseSelector(selector);
+
+        if(sel is Selector.NotInSet s){
+            s.key.Should().BeEquivalentTo(key);
+            s.values.Should().BeEquivalentTo(value);
+        } else {
+            Assert.Fail("Selector was not of type NotInSet");
+        }
+    }
     [Theory]
     [InlineData("foo in (1,2,3)", "foo=bar,sna=foo", false)]
     [InlineData("foo in (bar, baz)", "foo=bar,sna=foo", true)]

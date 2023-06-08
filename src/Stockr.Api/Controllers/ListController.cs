@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Text.Json;
 using dotnet_etcd.interfaces;
 using Microsoft.AspNetCore.Mvc;
@@ -28,7 +29,8 @@ public class ListController : ControllerBase
     {
         var keySpace = EtcdKeyUtilities.KeyFromKind(new ManifestRevision(group, version, kind));
         if (string.IsNullOrWhiteSpace(keySpace)) { return NotFound(); }
-
+        
+        var filters = filter is not null ? Selectors.TryParse(filter) : new [] { new Selector.None() };
 
         var etcdKey = Path.Combine(
             "/registry",
@@ -43,9 +45,7 @@ public class ListController : ControllerBase
                 }
                 manifest.Metadata.Revision = Math.Max(x.ModRevision, x.CreateRevision).ToString();
                 return manifest;
-            }).Where(x => {
-                return true;
-            });
+            }).Where(x => Selectors.Validate(filters, x.Metadata?.Labels ?? ImmutableDictionary<string, string>.Empty));
             
             return Ok(manifests);            
         }

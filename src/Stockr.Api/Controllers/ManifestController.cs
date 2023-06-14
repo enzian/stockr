@@ -75,7 +75,7 @@ public class ManifestController : ControllerBase
             name);
         try
         {
-            var etcdResult = await _etcdClient.GetAsync(etcdKey);
+            var etcdResult = await _etcdClient.GetAsync(etcdKey, cancellationToken: cancellationToken);
             if (etcdResult.Count < 1)
             {
                 return NotFound();
@@ -117,7 +117,7 @@ public class ManifestController : ControllerBase
             name);
         try
         {
-            var etcdResult = await _etcdClient.GetAsync(etcdKey);
+            var etcdResult = await _etcdClient.GetAsync(etcdKey, cancellationToken: cancellationToken);
             if (etcdResult.Count < 1)
             {
                 return NotFound();

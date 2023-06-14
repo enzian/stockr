@@ -92,11 +92,11 @@ public class SelectorTests
             Assert.Fail("Selector was not of type NotInSet");
         }
     }
+
     [Theory]
     [InlineData("foo in (1,2,3)", "foo=bar,sna=foo", false)]
     [InlineData("foo in (bar, baz)", "foo=bar,sna=foo", true)]
     [InlineData("foo in (bar)", "foo=bar,sna=foo", true)]
-    
     public void ParseTest_Validation(string selector, string dictionary, bool shouldMatch)
     {
         

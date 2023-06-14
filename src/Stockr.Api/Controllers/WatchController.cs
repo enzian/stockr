@@ -26,7 +26,8 @@ public class WatchController : ControllerBase
         string group,
         string version,
         string kind,
-        string? start_revision,
+        [FromQuery] string? start_revision,
+        [FromQuery] string? filter,
         CancellationToken cancellationToken)
     {
         var context = HttpContext;
@@ -36,6 +37,8 @@ public class WatchController : ControllerBase
         var etcdKey = Path.Combine(
             "/registry",
             EtcdKeyUtilities.KeyFromKind(new ManifestRevision(group, version, kind)));
+        
+        var filters = filter is not null ? Selectors.TryParse(filter) : new [] { new Selector.None() };
 
         try
         {
@@ -68,14 +71,18 @@ public class WatchController : ControllerBase
                             manifest.Metadata = new Metadata { Revision = revision.ToString() };
                         }
 
-                        var watchEvent = e switch
+                        if (Selectors.Validate(filters, manifest.Metadata.Labels))
                         {
-                            { Type: EventType.Put, Kv.Version: 1 } => new WatchEvent { Type = "ADDED", Object = manifest },
-                            { Type: EventType.Put, Kv.Version: >1 } => new WatchEvent { Type = "MODIFIED", Object = manifest },
-                            { Type: EventType.Delete } => new WatchEvent { Type = "DELETED", Object = manifest },
-                        };
+                            var watchEvent = e switch
+                            {
+                                { Type: EventType.Put, Kv.Version: 1 } => new WatchEvent { Type = "ADDED", Object = manifest },
+                                { Type: EventType.Put, Kv.Version: >1 } => new WatchEvent { Type = "MODIFIED", Object = manifest },
+                                { Type: EventType.Delete } => new WatchEvent { Type = "DELETED", Object = manifest },
+                            };
 
-                        await context.Response.WriteAsync($"{JsonSerializer.Serialize(watchEvent)}{Environment.NewLine}");
+                            await context.Response.WriteAsync($"{JsonSerializer.Serialize(watchEvent)}{Environment.NewLine}", cancellationToken);
+                        }
+
                     }
 
                     await context.Response.Body.FlushAsync();

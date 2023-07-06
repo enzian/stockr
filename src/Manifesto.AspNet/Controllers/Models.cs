@@ -10,9 +10,9 @@ public record struct Metadata
 
 public record struct Manifest
 {
-    public string Kind { get; init; }
-    public string Group { get; init; }
-    public string Version { get; init; }
+    public string? Kind { get; init; }
+    public string? Group { get; init; }
+    public string? Version { get; init; }
     public Metadata Metadata { get; init; }
     public dynamic Spec { get; init; }
 }

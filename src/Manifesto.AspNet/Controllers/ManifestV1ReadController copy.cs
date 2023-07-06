@@ -50,7 +50,7 @@ public class ManifestV1ReadController : ControllerBase
         }
         catch (Exception _)
         {
-            return this.Problem("failed to create or update resource from the given manifest");
+            return this.Problem("failed to get manifest");
         }
     }
 }

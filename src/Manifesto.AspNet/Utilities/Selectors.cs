@@ -1,5 +1,6 @@
+namespace Manifesto.AspNet.Utilities;
+
 using System.Text.RegularExpressions;
-using System.Windows.Markup;
 
 public record Selector
 {

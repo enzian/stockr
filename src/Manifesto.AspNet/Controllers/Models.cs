@@ -16,3 +16,9 @@ public record struct Manifest
     public Metadata Metadata { get; init; }
     public dynamic Spec { get; init; }
 }
+
+public class WatchEvent
+{
+    public string Type { get; set; }
+    public Manifest Object { get; set; }
+}

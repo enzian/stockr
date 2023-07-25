@@ -15,6 +15,7 @@ public record struct Manifest
     public string? Version { get; init; }
     public Metadata Metadata { get; init; }
     public dynamic Spec { get; init; }
+    public dynamic Status { get; init; }
 }
 
 public class WatchEvent

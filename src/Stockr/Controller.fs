@@ -14,28 +14,29 @@ type Metadata =
 
 type TestSpec = { A: string }
 
-type Manifest<'T> =
+type Manifest<'T, 'S> =
     { kind: string
       apigroup: string
       apiversion: string
       metadata: Metadata
-      spec: 'T }
+      spec: 'T
+      status: 'S }
 
-type Event<'T> =
-    | Update of Manifest<'T>
-    | Create of Manifest<'T>
-    | Delete of Manifest<'T>
+type Event<'T, 'S> =
+    | Update of Manifest<'T, 'S>
+    | Create of Manifest<'T, 'S>
+    | Delete of Manifest<'T, 'S>
 
-type WireEvent<'T> = {
+type WireEvent<'T, 'S> = {
     ``type``: string
-    object: Manifest<'T>
+    object: Manifest<'T, 'S>
 }
 
 
 let jsonOptions = new JsonSerializerOptions()
 jsonOptions.PropertyNameCaseInsensitive <- true
 
-let watchResource<'T> (client: HttpClient) uri (handler) (cts: CancellationToken) =
+let watchResource<'T, 'S> (client: HttpClient) uri (handler) (cts: CancellationToken) =
     async {
         let! responseSteam =
             client.GetStreamAsync(Path.Combine("apis/watch/", uri))
@@ -45,7 +46,7 @@ let watchResource<'T> (client: HttpClient) uri (handler) (cts: CancellationToken
 
         while (not streamReader.EndOfStream) && (not cts.IsCancellationRequested) do
             let! line = streamReader.ReadLineAsync() |> Async.AwaitTask
-            let wireEvent = JsonSerializer.Deserialize<WireEvent<'T>> (line, jsonOptions)
+            let wireEvent = JsonSerializer.Deserialize<WireEvent<'T, 'S>> (line, jsonOptions)
             printfn "Type: %A" wireEvent
             let event =
                 match wireEvent.``type`` with

@@ -1,7 +1,9 @@
 using Manifesto.AspNet;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Formatters;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
-
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -15,7 +17,6 @@ builder.Services.AddKeySpaces((string kind, string version, string group) => {
     };
     
 });
-// builder.Services.AddSingleton<IEtcdClient>(new EtcdClient("http://localhost:2379"));
 
 var app = builder.Build();
 

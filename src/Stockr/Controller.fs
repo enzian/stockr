@@ -12,8 +12,6 @@ type Metadata =
       annotations: Map<string, string>
       revision: string }
 
-type TestSpec = { A: string }
-
 type Manifest<'T, 'S> =
     { kind: string
       apigroup: string

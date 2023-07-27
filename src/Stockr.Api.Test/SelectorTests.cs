@@ -1,5 +1,5 @@
-using System.Text.RegularExpressions;
 using FluentAssertions;
+using Manifesto.AspNet.Utilities;
 
 public class SelectorTests
 {

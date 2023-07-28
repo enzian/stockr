@@ -68,11 +68,14 @@ public class ManifestV1WatchController : ControllerBase
 
             return Ok();
         }
-        catch (Exception e)
-        {
-            logger.LogError(e, $"Failed to get resource {keyspace}");
-            return StatusCode(StatusCodes.Status500InternalServerError, "Failed to read the given manifest.");
+        catch (TaskCanceledException _){
+            return new EmptyResult();
         }
+        catch (Exception e) {
+            logger.LogError(e, $"Failed to get resource {keyspace}");
+            return new EmptyResult();
+        }
+
     }
 
     private static async Task HandleReponse(

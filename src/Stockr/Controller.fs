@@ -36,22 +36,25 @@ jsonOptions.PropertyNameCaseInsensitive <- true
 
 let watchResource<'T, 'S> (client: HttpClient) uri (handler) (cts: CancellationToken) =
     async {
+
         let! responseSteam =
             client.GetStreamAsync(Path.Combine("apis/watch/", uri))
             |> Async.AwaitTask
 
         let streamReader = new StreamReader(responseSteam)
+        try
 
-        while (not streamReader.EndOfStream) && (not cts.IsCancellationRequested) do
-            let! line = streamReader.ReadLineAsync() |> Async.AwaitTask
-            let wireEvent = JsonSerializer.Deserialize<WireEvent<'T, 'S>> (line, jsonOptions)
-            printfn "Type: %A" wireEvent
-            let event =
-                match wireEvent.``type`` with
-                | "MODIFIED" -> Update wireEvent.object
-                | "ADDED" -> Create wireEvent.object
-                | "DELETED" -> Delete wireEvent.object
-                | _ -> Update wireEvent.object
+            while (not streamReader.EndOfStream) && (not cts.IsCancellationRequested) do
+                let! line = streamReader.ReadLineAsync() |> Async.AwaitTask
+                let wireEvent = JsonSerializer.Deserialize<WireEvent<'T, 'S>> (line, jsonOptions)
+                let event =
+                    match wireEvent.``type`` with
+                    | "MODIFIED" -> Update wireEvent.object
+                    | "ADDED" -> Create wireEvent.object
+                    | "DELETED" -> Delete wireEvent.object
+                    | _ -> Update wireEvent.object
 
-            do! handler event
+                do! handler event
+        with
+        | :? IOException -> printfn "connection closed by host" 
     }

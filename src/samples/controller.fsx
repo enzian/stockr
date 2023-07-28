@@ -9,7 +9,7 @@ type TestStatus = { B: string }
 
 
 
-let client = new HttpClient()
+let client= new HttpClient()
 client.BaseAddress <- new Uri("https://localhost:7243/")
 
 let handler (str: Event<TestSpec, TestStatus>) =

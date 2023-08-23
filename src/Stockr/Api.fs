@@ -1,10 +1,20 @@
-module controller
+module api
 
-open System.Threading
-open System.Net.Http
+open FsHttp
 open System.IO
 open System.Text.Json
+open System.Threading
 open System
+open System.Net.Http
+
+type Control.Async with
+    static member StartDisposable(op: Async<unit>) =
+        let ct = new CancellationTokenSource()
+        Async.Start(op, ct.Token)
+
+        { new IDisposable with
+            member x.Dispose() = ct.Cancel() }
+
 
 type Metadata =
     { name: string
@@ -31,22 +41,18 @@ type WireEvent<'T, 'S> =
       object: Manifest<'T, 'S> }
 
 
+type ManifestApi<'TSpec, 'TStatus> =
+    abstract Get: string -> Option<Manifest<'TSpec, 'TStatus>>
+    abstract List: seq<Manifest<'TSpec, 'TStatus>>
+    abstract Watch: (CancellationToken -> Async<IObservable<Event<'TSpec,'TStatus>>>)
+
 let jsonOptions = new JsonSerializerOptions()
 jsonOptions.PropertyNameCaseInsensitive <- true
-
-type Control.Async with
-
-    static member StartDisposable(op: Async<unit>) =
-        let ct = new CancellationTokenSource()
-        Async.Start(op, ct.Token)
-
-        { new IDisposable with
-            member x.Dispose() = ct.Cancel() }
 
 let watchResource<'T, 'S> (client: HttpClient) uri (cts: CancellationToken) =
     async {
 
-        let! responseSteam = client.GetStreamAsync(Path.Combine("apis/watch/", uri)) |> Async.AwaitTask
+        let! responseSteam = client.GetStreamAsync(Path.Combine("watch/", uri)) |> Async.AwaitTask
 
         let streamReader = new StreamReader(responseSteam)
 
@@ -56,21 +62,6 @@ let watchResource<'T, 'S> (client: HttpClient) uri (cts: CancellationToken) =
                 observer.OnNext(line)
                 return! readEvent observer streamReadr cts
             }
-        // try
-
-        //     while (not streamReader.EndOfStream) && (not cts.IsCancellationRequested) do
-        //         let! line = streamReader.ReadLineAsync() |> Async.AwaitTask
-        //         let wireEvent = JsonSerializer.Deserialize<WireEvent<'T, 'S>> (line, jsonOptions)
-        //         let event =
-        //             match wireEvent.``type`` with
-        //             | "MODIFIED" -> Update wireEvent.object
-        //             | "ADDED" -> Create wireEvent.object
-        //             | "DELETED" -> Delete wireEvent.object
-        //             | _ -> Update wireEvent.object
-
-        //         do! handler event
-        // with
-        // | :? IOException -> printfn "connection closed by host"
 
         let lineReaderObservable =
             { new IObservable<_> with
@@ -87,3 +78,42 @@ let watchResource<'T, 'S> (client: HttpClient) uri (cts: CancellationToken) =
                 | "DELETED" -> Delete wireEvent.object
                 | _ -> Update wireEvent.object)
     }
+
+
+let fetchWithKey<'TSpec, 'TStatus> httpClient path resourceKey =
+    try
+        Some(
+            http {
+                config_transformHttpClient (fun _ -> httpClient)
+                GET(Path.Combine(httpClient.BaseAddress.ToString(), path, resourceKey))
+                CacheControl "no-cache"
+            }
+            |> Request.send
+            |> Response.deserializeJson<Manifest<'TSpec, 'TStatus>>
+        )
+    with e ->
+        printfn "%A" e
+        None
+
+
+let listWithKey<'TSpec, 'TStatus> httpClient path =
+    try
+
+        http {
+            config_transformHttpClient (fun _ -> httpClient)
+            GET(Path.Combine(httpClient.BaseAddress.ToString(), path))
+        }
+        |> Request.send
+        |> Response.deserializeJson<seq<Manifest<'TSpec, 'TStatus>>>
+    with _ ->
+        Seq.empty
+
+let ManifestsFor<'TSpec, 'TStatus> httpClient path =
+    { new ManifestApi<'TSpec, 'TStatus> with
+        member _.Get key =
+            fetchWithKey<'TSpec, 'TStatus> httpClient path key
+        member _.List =
+            listWithKey httpClient path
+        member _.Watch =
+            watchResource httpClient path}
+

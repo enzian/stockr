@@ -1,7 +1,5 @@
 module persistence
 
-open System
-
 open System.Text.Json
 open dotnet_etcd
 

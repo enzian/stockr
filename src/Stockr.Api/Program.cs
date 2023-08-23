@@ -1,15 +1,27 @@
+using System.CommandLine;
 using Manifesto.AspNet;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Formatters;
-using Microsoft.Extensions.Options;
+
+var clientKeyOption = new Option<int>
+    (name: "--api-client-key",
+    description: "Key used for client autentication",
+    getDefaultValue: () => 42);
+var clientCertificateOption = new Option<int>
+    (name: "--api-client-certificate",
+    description: "Client ",
+    getDefaultValue: () => 42);
+
+var rootCommand = new RootCommand("Parameter binding example");
+rootCommand.Add(clientKeyOption);
+rootCommand.Add(clientCertificateOption);
+
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddManifesto();
-builder.Services.AddKeySpaces((string kind, string version, string group) => {
+builder.Services.AddManifesto()
+    .AddKeySpaces((string kind, string version, string group) => {
     return  ((kind, group, version)) switch {
         ("stock", "logistics.stockr.io", "v1alpha1") => $"/registry/stocks",
         ("stocks", "logistics.stockr.io", "v1alpha1") => $"/registry/stocks",
@@ -33,4 +45,4 @@ app.UseAuthorization();
 
 app.MapManifestApiControllers();
 
-app.Run();
+await app.RunAsync();

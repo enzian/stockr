@@ -4,24 +4,16 @@ open System.Net.Http
 open System
 open controller;
 
-type TestSpec = { A: string }
-type TestStatus = { B: string }
-
-
+type StockSpec = { material: string; qty : string }
+type StockStatus = { B: string }
 
 let client= new HttpClient()
 client.BaseAddress <- new Uri("https://localhost:7243/")
 
-let handler (str: Event<TestSpec, TestStatus>) =
-    async {
-        printfn "RECV: %A" str
-    }
-
 async {
     let! cts = Async.CancellationToken
-    let uri = "stocks.stockr.io/v1alpha1/stock/"
-    let! result = watchResource<TestSpec, TestStatus> client uri handler cts
-    return result
+    let uri = "logistics.stockr.io/v1alpha1/stock"
+    let! result = watchResource<StockSpec, StockStatus> client uri cts
+    result.Subscribe((fun x -> printfn"%A"  x)) |> ignore
 }
 |> Async.RunSynchronously
-|> printfn "%A"

@@ -2,9 +2,6 @@ open System.Net.Http
 open System
 open System.Threading
 
-type TestSpec = { material: string }
-type TestStatus = { B: string }
-
 type StockSpec = { material: string; qty : string }
 type StockStatus = { B: string }
 

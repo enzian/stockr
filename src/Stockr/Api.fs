@@ -45,6 +45,7 @@ type ManifestApi<'TSpec, 'TStatus> =
     abstract Get: string -> Option<Manifest<'TSpec, 'TStatus>>
     abstract List: seq<Manifest<'TSpec, 'TStatus>>
     abstract Watch: (CancellationToken -> Async<IObservable<Event<'TSpec,'TStatus>>>)
+    abstract Put: (Manifest<'TSpec, 'TStatus> -> Result<unit, exn>)
 
 let jsonOptions = new JsonSerializerOptions()
 jsonOptions.PropertyNameCaseInsensitive <- true
@@ -108,12 +109,26 @@ let listWithKey<'TSpec, 'TStatus> httpClient path =
     with _ ->
         Seq.empty
 
-let ManifestsFor<'TSpec, 'TStatus> httpClient path =
+let putManifest<'TSpec, 'TStatus> httpClient path (manifest: Manifest<'TSpec, 'TStatus>) =
+    try
+        http {
+            config_transformHttpClient (fun _ -> httpClient)
+            PUT (Path.Combine(httpClient.BaseAddress.ToString(), path))
+            body
+            jsonSerialize manifest
+        }
+        |> Request.send |> ignore
+        Ok ()
+    with e ->
+        Error e
+
+let ManifestsFor<'TSpec, 'TStatus> (httpClient: HttpClient) (path: string) =
     { new ManifestApi<'TSpec, 'TStatus> with
         member _.Get key =
-            fetchWithKey<'TSpec, 'TStatus> httpClient path key
+            fetchWithKey httpClient path key
         member _.List =
             listWithKey httpClient path
         member _.Watch =
-            watchResource httpClient path}
-
+            watchResource httpClient path
+        member _.Put = putManifest httpClient path
+    }

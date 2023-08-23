@@ -1,10 +1,10 @@
 #r "nuget: FsHttp, 11.0.0"
 
 #load "../Stockr/Api.fs"
-#load "../Stockr/Controller.fs"
 
 open System.Net.Http
 open System
+open api
 
 type StockSpec = { material: string; qty : string }
 type StockStatus = { B: string }
@@ -18,11 +18,5 @@ let stockApi =
         "logistics.stockr.io/v1alpha1/stock"
 
 stockApi.List
-stockApi.Get "test"
 
-async {
-    let! cts = Async.CancellationToken
-    let! result = stockApi.Watch cts
-    result.Subscribe((fun x -> printfn"%A"  x)) |> ignore
-}
-|> Async.RunSynchronously
+stockApi.Get "test"

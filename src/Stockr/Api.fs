@@ -8,6 +8,7 @@ open System
 open System.Net.Http
 
 type Control.Async with
+
     static member StartDisposable(op: Async<unit>) =
         let ct = new CancellationTokenSource()
         Async.Start(op, ct.Token)
@@ -40,11 +41,30 @@ type WireEvent<'T, 'S> =
     { ``type``: string
       object: Manifest<'T, 'S> }
 
+type Is =
+    | In of seq<string>
+    | NotIn of seq<string>
+    | Eq of string
+    | NotEq of string
+    | Set
+    | NotSet
+
+type KeyIs = (string * Is)
+
+let formatLabelFilter condition =
+    match condition with
+    | (k, Eq v ) -> sprintf "%s=%s" k v
+    | (k, NotEq v ) ->sprintf "%s!=%s" k v
+    | (k, Set) -> sprintf "%s" k
+    | (k, NotSet) -> sprintf "!%s" k
+    | (k, In values) -> sprintf "%s in (%s)" k (values |> String.concat ",")
+    | (k, NotIn values) -> sprintf "%s in (%s)" k (values |> String.concat ",")
 
 type ManifestApi<'TSpec, 'TStatus> =
     abstract Get: string -> Option<Manifest<'TSpec, 'TStatus>>
     abstract List: seq<Manifest<'TSpec, 'TStatus>>
-    abstract Watch: (CancellationToken -> Async<IObservable<Event<'TSpec,'TStatus>>>)
+    abstract FilterByLabel: (KeyIs seq -> Manifest<'TSpec, 'TStatus> seq)
+    abstract Watch: (CancellationToken -> Async<IObservable<Event<'TSpec, 'TStatus>>>)
     abstract Put: (Manifest<'TSpec, 'TStatus> -> Result<unit, exn>)
 
 let jsonOptions = new JsonSerializerOptions()
@@ -52,7 +72,6 @@ jsonOptions.PropertyNameCaseInsensitive <- true
 
 let watchResource<'T, 'S> (client: HttpClient) uri (cts: CancellationToken) =
     async {
-
         let! responseSteam = client.GetStreamAsync(Path.Combine("watch/", uri)) |> Async.AwaitTask
 
         let streamReader = new StreamReader(responseSteam)
@@ -113,22 +132,34 @@ let putManifest<'TSpec, 'TStatus> httpClient path (manifest: Manifest<'TSpec, 'T
     try
         http {
             config_transformHttpClient (fun _ -> httpClient)
-            PUT (Path.Combine(httpClient.BaseAddress.ToString(), path))
+            PUT(Path.Combine(httpClient.BaseAddress.ToString(), path))
             body
             jsonSerialize manifest
         }
-        |> Request.send |> ignore
-        Ok ()
+        |> Request.send
+        |> ignore
+
+        Ok()
     with e ->
         Error e
 
+let listWithFilter<'TSpec, 'TStatus> httpClient path (keyIs: KeyIs seq) =
+    try
+        let filter = keyIs |> Seq.map formatLabelFilter |> String.concat ","
+        http {
+            config_transformHttpClient (fun _ -> httpClient)
+            GET(Path.Combine(httpClient.BaseAddress.ToString(), path))
+            query [("filter", filter)]
+        }
+        |> Request.send
+        |> Response.deserializeJson<seq<Manifest<'TSpec, 'TStatus>>>
+    with _ ->
+        Seq.empty
+
 let ManifestsFor<'TSpec, 'TStatus> (httpClient: HttpClient) (path: string) =
     { new ManifestApi<'TSpec, 'TStatus> with
-        member _.Get key =
-            fetchWithKey httpClient path key
-        member _.List =
-            listWithKey httpClient path
-        member _.Watch =
-            watchResource httpClient path
-        member _.Put = putManifest httpClient path
-    }
+        member _.Get key = fetchWithKey httpClient path key
+        member _.List = listWithKey httpClient path
+        member _.FilterByLabel = listWithFilter httpClient path
+        member _.Watch = watchResource httpClient path
+        member _.Put = putManifest httpClient path }

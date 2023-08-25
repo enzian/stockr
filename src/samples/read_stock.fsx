@@ -17,6 +17,11 @@ let stockApi =
         client
         "logistics.stockr.io/v1alpha1/stock"
 
+// List all resources
 stockApi.List
 
+// Filter all resources by their label using filters
+stockApi.FilterByLabel [ ("locations.stockr.io/ismobile", Eq "true")]
+
+// get a specific resource by its name
 stockApi.Get "test"

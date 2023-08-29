@@ -26,43 +26,6 @@ public class ManifestV1CreationController : ControllerBase
         IEtcdClient client,
         CancellationToken cancellationToken)
     {
-        // var keyspace = keyspaceSource.GetKeySpace(kind, version, group);
-        // if (string.IsNullOrEmpty(keyspace))
-        // {
-        //     return BadRequest("Unknown manifest kind, group or version");
-        // }
-
-        // if (manifest.Subdocuments.Count == 0 || !manifest.Subdocuments.Keys.Contains("spec"))
-        // {
-        //     return BadRequest("resource manifest does not contain a spec subdocument");
-        // }
-
-        // var key = Path.Combine(keyspace, manifest.Metadata.Name);
-
-        // var typeSanitizedManifest = manifest with { Group = group, Kind = kind, Version = version };
-
-        // // check for an existing value at the current key and move the state over from that manifest
-        // var existingDoc = await client.GetAsync(key, cancellationToken: cancellationToken);
-        // if (existingDoc != null && existingDoc.Count > 0)
-        // {
-        //     var existingManifest = JsonSerializer.Deserialize<Manifest>(existingDoc.Kvs.First().Value.ToStringUtf8());
-        //     var subdocumentsToKeep = existingManifest.Subdocuments;
-        //     subdocumentsToKeep["spec"] = manifest.Subdocuments["spec"];
-        //     typeSanitizedManifest = typeSanitizedManifest with { Subdocuments = subdocumentsToKeep };
-        // }
-
-        // var serializedManifest = JsonSerializer.Serialize(typeSanitizedManifest);
-
-        // try
-        // {
-        //     await client.PutAsync(key, serializedManifest, cancellationToken: cancellationToken);
-        // }
-        // catch (Exception)
-        // {
-        //     return this.Problem("failed to create or update resource from the given manifest");
-        // }
-
-        // return Ok();
         return await PutSubdocumentAsync(group, version, kind, "spec",  manifest, client, cancellationToken);
     }
 
@@ -84,7 +47,7 @@ public class ManifestV1CreationController : ControllerBase
 
         if (manifest.Subdocuments.Count == 0 || !manifest.Subdocuments.Keys.Contains(subdocument))
         {
-            return BadRequest("resource manifest does not contain a spec subdocument");
+            return BadRequest($"resource manifest does not contain a {subdocument} subdocument");
         }
 
         var key = Path.Combine(keyspace, manifest.Metadata.Name);

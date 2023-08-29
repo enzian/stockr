@@ -21,8 +21,8 @@ type Metadata =
     { name: string
       ``namespace``: string option
       labels: Map<string, string>
-      annotations: Map<string, string>
-      revision: string }
+      annotations: option<Map<string, string>>
+      revision: option<string> }
 
 type Manifest<'T, 'S> =
     { kind: string

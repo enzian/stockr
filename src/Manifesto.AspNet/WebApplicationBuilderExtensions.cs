@@ -1,6 +1,5 @@
 ﻿using dotnet_etcd;
 using dotnet_etcd.interfaces;
-using Manifesto.AspNet.Etcd;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Builder;
@@ -17,7 +16,6 @@ public static class WebApplicationBuilderExtensions
 {
     public static IServiceCollection AddManifesto(this IServiceCollection services)
     {
-        services.AddTransient<IManifestRepository, EtcdManifestRepository>();
         services.AddSingleton<IEtcdClient>(new EtcdClient("http://localhost:2379"));
 
         var assembly = typeof(ManifestV1CreationController).Assembly;

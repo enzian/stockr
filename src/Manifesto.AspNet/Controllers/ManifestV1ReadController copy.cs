@@ -43,10 +43,13 @@ public class ManifestV1ReadController : ControllerBase
                 return NotFound();
             }
 
-            var first = JsonSerializer.Deserialize<Manifest>( 
-                response.Kvs.First().Value.Span);
+            var firstKv = response.Kvs.First();
+
+            var first = JsonSerializer.Deserialize<Manifest>(firstKv.Value.Span);
             
-            return Ok(first);
+            var manifestWithVersion = first with { Metadata = first.Metadata with { Revision = (firstKv.ModRevision > 0 ? firstKv.ModRevision : firstKv.CreateRevision).ToString()}};
+            
+            return Ok(manifestWithVersion);
         }
         catch (Exception _)
         {

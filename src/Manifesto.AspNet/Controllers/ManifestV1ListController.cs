@@ -1,5 +1,6 @@
 namespace Manifesto.AspNet.Controllers;
 
+using System.Collections.Immutable;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using dotnet_etcd.interfaces;
@@ -52,13 +53,15 @@ public class ManifestV1ListController : ControllerBase
         {
             var response = await client.GetRangeAsync(keyspace, cancellationToken: cancellationToken);
             var manifests = response.Kvs
-                .Select(x => JsonSerializer.Deserialize<Manifest>(x.Value.Span))
+                .Select(x => JsonSerializer
+                    .Deserialize<Manifest>(x.Value.Span)
+                    .AddRevisionFromEtcdKv(x))
                 .ToArray();
             return Ok(manifests);
         }
-        catch (Exception _)
+        catch (Exception)
         {
-            return this.Problem("failed to list resources.");
+            return Problem("failed to list resources.");
         }
     }
 
@@ -86,14 +89,18 @@ public class ManifestV1ListController : ControllerBase
         {
             var response = await client.GetRangeAsync(keyspace, cancellationToken: cancellationToken);
             var manifests = response.Kvs
-                .Select(x => JsonSerializer.Deserialize<Manifest>(x.Value.Span))
-                .Where(x => Selectors.Validate(filters, x.Metadata.Labels))
+                .Select(x => JsonSerializer
+                    .Deserialize<Manifest>(x.Value.Span)
+                    .AddRevisionFromEtcdKv(x))
+                .Where(x => Selectors.Validate(
+                    filters,
+                    x.Metadata.Labels ?? ImmutableDictionary<string, string>.Empty))
                 .ToArray();
             return Ok(manifests);
         }
-        catch (Exception _)
+        catch (Exception)
         {
-            return this.Problem("failed to list resources.");
+            return Problem("failed to list resources.");
         }
     }
 }

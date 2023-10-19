@@ -24,13 +24,13 @@ let stock: api.Manifest<StockSpec, StockStatus> = {
         name = "test1"
         ``namespace`` = None
         labels = 
-            Map [("locations.stockr.io/footprint", "tub");
-             ("locations.stockr.io/ismobile", "false")]
+            Some (Map [("locations.stockr.io/footprint", "tub");
+             ("locations.stockr.io/ismobile", "false")])
         annotations = None
-        revison = None}
-    spec = {
+        revision = None}
+    spec = Some {
         material = "p146723-11343"
         qty = "12pcs" }
-    status = { B = DateTime.Now.ToFileTimeUtc().ToString() } }
+    status = Some { B = DateTime.Now.ToFileTimeUtc().ToString() } }
 
 stockStatusApi.Put stock

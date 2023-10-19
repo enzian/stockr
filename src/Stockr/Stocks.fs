@@ -15,7 +15,7 @@ type Material =
         | Material s -> s
 
 type Quantity =
-    | Quantity of int
+    | Quantity of double
 
     member x.Value =
         match x with
@@ -30,11 +30,33 @@ type Amount = {
     unit: Unit
 }
 
-type Stock = 
-    {
-      Location: string
-      Material: Material
-      Amount: Amount 
-    }
+type Stock = {
+    Location: string
+    Material: Material
+    Amount: Amount 
+}
 
-type CreateStock = Stock -> bool
+type ApiStockAmount = {
+    qty: double
+    unit: string
+} 
+type ApiStock = {
+    Location: string
+    Material: string
+    Amount: ApiStockAmount
+}
+
+let toApiStock (model: Stock) = 
+    let (Quantity q) = model.Amount.qty
+    let (Unit u) = model.Amount.unit
+    
+    {
+        Location = model.Location
+        Material = 
+            match model.Material with 
+            | Material (s) -> s
+        Amount = {
+            qty = q
+            unit = u
+        }
+    }

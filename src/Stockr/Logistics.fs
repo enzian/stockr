@@ -2,7 +2,6 @@ module logistics
 
 open stock
 open locations
-open persistence
 open System
 
 
@@ -14,88 +13,112 @@ type StockMovementError =
     | DisparateUnits
     | FailedToDropEmptySpace
 
-type LocationRepository = Repository<Location>
-type StockRepository = Repository<Stock>
+// type LocationRepository = Repository<Location>
+// type StockRepository = Repository<Stock>
 
-let MoveStock (locationRepo: LocationRepository) (stockRepo: StockRepository) stockId targetLocationId =
-    match stockRepo.FindById stockId with
-    | Error e -> Error(StockNotFound)
-    | Ok (None) -> Error StockNotFound
-    | Ok (Some stock) ->
-        match locationRepo.FindById targetLocationId with
-        | Error _ -> Error(TargetLocationNotFound)
-        | Ok (None) -> Error TargetLocationNotFound
-        | Ok (Some location) ->
-            let movedStock = { stock with spec = {stock.spec with Location = location.name} }
+// let MoveStock (locationRepo: LocationRepository) (stockRepo: StockRepository) stockId targetLocationId =
+//     match stockRepo.FindById stockId with
+//     | Error e -> Error(StockNotFound)
+//     | Ok (None) -> Error StockNotFound
+//     | Ok (Some { name = n ; metadata = m ; spec = Some s}) ->
+//         match locationRepo.FindById targetLocationId with
+//         | Error _ -> Error(TargetLocationNotFound)
+//         | Ok (None) -> Error TargetLocationNotFound
+//         | Ok (Some { spec = Some location}) ->
+//             let movedStock = {
+//                 name = n
+//                 metadata = m
+//                 spec = Some { s with Location = location.Id } }
 
-            match stockRepo.Update movedStock with
-            | Error _ -> Error(FailedToMoveStock)
-            | Ok _ -> Ok()
+//             match stockRepo.Update movedStock with
+//             | Error _ -> Error(FailedToMoveStock)
+//             | Ok _ -> Ok()
+//         | _ -> Error FailedToMoveStock
 
-let FindStockByLocation (stockRepo : Repository<Stock>) location =
-    try
-        let allStocks = stockRepo.List
-        match allStocks with
-        | Ok stocks -> Ok (stocks |> Seq.filter (fun x -> x.spec.Location = location))
-        | Error e -> Error e
-    with ex ->
-        Error ex.Message
+// let FindStockByLocation (stockRepo : Repository<Stock>) location =
+//     try
+//         let allStocks = stockRepo.List
+//         match allStocks with
+//         | Ok stocks -> 
+//             Ok (
+//                 stocks
+//                 |> Seq.filter (fun x -> 
+//                     match x.spec with 
+//                     | Some s -> s.Location = location
+//                     | None -> false))
+//         | Error e -> Error e
+//     with ex ->
+//         Error ex
+// let MoveQuantity
+//     (locationRepo: LocationRepository)
+//     (stockRepo: StockRepository)
+//     (stockId: string)
+//     (targetLocationId: string)
+//     (material: string)
+//     (qty: double)
+//     (unit: string)
+//     =
 
+//     match stockRepo.FindById stockId with
+//     | Error e -> Error StockNotFound
+//     | Ok (None) -> Error StockNotFound
+//     | Ok (Some { name = stockName; metadata = stockMetadata; spec = Some stock}) ->
+//         match ((qty, unit), (stock.Amount.qty, stock.Amount.unit)) with
+//         | ((qty, _), (sqty, _)) when sqty < qty -> Error InsufficientQuantity
+//         | ((_, unit), (_, sunit)) when unit <> sunit -> Error DisparateUnits
+//         | ((qty, unit), (sqty, _)) ->
+//             match locationRepo.FindById targetLocationId with
+//             | Error _ -> Error TargetLocationNotFound
+//             | Ok (None) -> Error TargetLocationNotFound
+//             | Ok (Some { spec = Some targetLocationSpec}) ->
+//                 match FindStockByLocation stockRepo targetLocationSpec.Id with
+//                 | Error _ -> Error TargetLocationNotFound
+//                 | Ok stocks ->
+//                     let x =
+//                         stocks
+//                         |> Seq.filter (fun x -> 
+//                             match x.spec with
+//                             | Some s -> s.Material = stock.Material
+//                             | None -> false)
+//                         |> Seq.tryLast
+//                     match x with
+//                     | None ->
+//                         let id = Guid.NewGuid().ToString()
+//                         let newStock = {
+//                                 name = id
+//                                 metadata = {
+//                                     labels = Map<string, string> []
+//                                     annotations = Map<string, string> [] }
+//                                 spec = Some {
+//                                     Location = targetLocationId
+//                                     Material = stock.Material
+//                                     Amount = {
+//                                         qty = qty
+//                                         unit = unit}}}
 
-let MoveQuantity
-    (locationRepo: LocationRepository)
-    (stockRepo: StockRepository)
-    (stockId: string)
-    (targetLocationId: string)
-    (material: string)
-    (amount: Amount)
-    =
+//                         stockRepo.Create newStock |> ignore
+//                     | Some {name = n; metadata = m; spec = Some s} ->
+//                         let { qty = tqty } = s.Amount
+//                         let { qty = qty } = amount
+//                         let targetStock = {
+//                             name = n
+//                             metadata = m
+//                             spec = Some { s with Amount = { qty = (tqty + qty) ; unit = unit } }}
+//                         stockRepo.Update targetStock |> ignore
 
-    match stockRepo.FindById stockId with
-    | Error e -> Error StockNotFound
-    | Ok (None) -> Error StockNotFound
-    | Ok (Some stock) ->
-        match ((amount.qty, amount.unit), (stock.spec.Amount.qty, stock.spec.Amount.unit)) with
-        | ((qty, _), (sqty, _)) when sqty < qty -> Error InsufficientQuantity
-        | ((_, unit), (_, sunit)) when unit <> sunit -> Error DisparateUnits
-        | ((qty, unit), (sqty, _)) ->
-            match locationRepo.FindById targetLocationId with
-            | Error _ -> Error TargetLocationNotFound
-            | Ok (None) -> Error TargetLocationNotFound
-            | Ok (Some targetLocation) ->
-                match FindStockByLocation stockRepo targetLocation.spec.Id with
-                | Error _ -> Error TargetLocationNotFound
-                | Ok stocks ->
-                    match stocks |> Seq.filter (fun x -> x.spec.Material = stock.spec.Material) |> Seq.tryLast with
-                    | None ->
-                        let id = Guid.NewGuid().ToString()
-                        let newStock = {
-                                name = id
-                                metadata = {
-                                    labels = Map<string, string> []
-                                    annotations = Map<string, string> [] }
-                                spec = {
-                                    Location = targetLocationId
-                                    Material = stock.spec.Material
-                                    Amount = amount}}
+//                     let remainingQty = sqty - qty
+//                     match remainingQty with
+//                     | x when x > 0 ->
+//                         let deductedSourceStock = {
+//                             name = stockName 
+//                             metadata = stockMetadata
+//                             spec = Some { stock with Amount = { qty = x ; unit = unit } }}
 
-                        stockRepo.Create newStock |> ignore
-                    | Some tail ->
-                        let { qty = tqty } = tail.spec.Amount
-                        let { qty = qty } = amount
-                        let targetStock = { tail with spec = { tail.spec with Amount = { qty = (tqty + qty) ; unit = unit } }}
-                        stockRepo.Update targetStock |> ignore
-
-                    let remainingQty = sqty - qty
-                    match remainingQty with
-                    | Quantity (x) when x > 0 ->
-                        let deductedSourceStock = { stock with spec = { stock.spec with Amount = { qty = x |> Quantity; unit = unit } }}
-
-                        match stockRepo.Update deductedSourceStock with
-                        | Error _ -> Error FailedToMoveStock
-                        | Ok _ -> Ok()
-                    | Quantity (x) when x < 0 ->
-                        match stockRepo.Delete stock.name with
-                        | Error _ -> Error FailedToDropEmptySpace
-                        | Ok _ -> Ok()
-                    | _ -> Error FailedToMoveStock
+//                         match stockRepo.Update deductedSourceStock with
+//                         | Error _ -> Error FailedToMoveStock
+//                         | Ok _ -> Ok()
+//                     | x when x < 0 ->
+//                         match stockRepo.Delete stockName with
+//                         | Error _ -> Error FailedToDropEmptySpace
+//                         | Ok _ -> Ok()
+//                     | _ -> Error FailedToMoveStock

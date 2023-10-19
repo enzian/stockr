@@ -6,6 +6,7 @@ open System.Text.Json
 open System.Threading
 open System
 open System.Net.Http
+open filter
 
 type Control.Async with
 
@@ -20,17 +21,17 @@ type Control.Async with
 type Metadata =
     { name: string
       ``namespace``: string option
-      labels: Map<string, string>
-      annotations: option<Map<string, string>>
-      revision: option<string> }
+      labels: Map<string, string> option
+      annotations: Map<string, string> option
+      revision: string option }
 
 type Manifest<'T, 'S> =
     { kind: string
       apigroup: string
       apiversion: string
       metadata: Metadata
-      spec: 'T
-      status: 'S }
+      spec: 'T option
+      status: 'S option }
 
 type Event<'T, 'S> =
     | Update of Manifest<'T, 'S>
@@ -41,15 +42,6 @@ type WireEvent<'T, 'S> =
     { ``type``: string
       object: Manifest<'T, 'S> }
 
-type Is =
-    | In of seq<string>
-    | NotIn of seq<string>
-    | Eq of string
-    | NotEq of string
-    | Set
-    | NotSet
-
-type KeyIs = (string * Is)
 
 let formatLabelFilter condition =
     match condition with
@@ -66,6 +58,7 @@ type ManifestApi<'TSpec, 'TStatus> =
     abstract FilterByLabel: (KeyIs seq -> Manifest<'TSpec, 'TStatus> seq)
     abstract Watch: (CancellationToken -> Async<IObservable<Event<'TSpec, 'TStatus>>>)
     abstract Put: (Manifest<'TSpec, 'TStatus> -> Result<unit, exn>)
+    abstract Delete: (string -> Result<unit, exn>)
 
 let jsonOptions = new JsonSerializerOptions()
 jsonOptions.PropertyNameCaseInsensitive <- true
@@ -156,10 +149,23 @@ let listWithFilter<'TSpec, 'TStatus> httpClient path (keyIs: KeyIs seq) =
     with _ ->
         Seq.empty
 
+let dropManifest httpClient path key =
+    try
+        http {
+            config_transformHttpClient (fun _ -> httpClient)
+            DELETE (Path.Combine(httpClient.BaseAddress.ToString(), path, key))
+        }
+        |> Request.send
+        |> ignore
+        Ok ()
+    with e ->
+        Error e
+
 let ManifestsFor<'TSpec, 'TStatus> (httpClient: HttpClient) (path: string) =
     { new ManifestApi<'TSpec, 'TStatus> with
         member _.Get key = fetchWithKey httpClient path key
         member _.List = listWithKey httpClient path
         member _.FilterByLabel = listWithFilter httpClient path
         member _.Watch = watchResource httpClient path
-        member _.Put = putManifest httpClient path }
+        member _.Put = putManifest httpClient path 
+        member _.Delete = dropManifest httpClient path }

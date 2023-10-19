@@ -1,10 +1,11 @@
 #r "nuget: FsHttp, 11.0.0"
 
 #load "../Stockr/Api.fs"
+#load "../Stockr/Filters.fs"
 
 open System.Net.Http
 open System
-open api
+open filter
 
 type StockSpec = { material: string; qty : string }
 type StockStatus = { B: string }

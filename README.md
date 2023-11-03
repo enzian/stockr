@@ -68,7 +68,7 @@ A location is a description of a physical location that can then hold quantities
         "annotations": {...}
     },
     "spec": {
-        "name": "02-005-10",,
+        "name": "02-005-10",
         "parent": "01-005"
         "capacity": [
             {"amount": 10, "footprint": "eur-1"},

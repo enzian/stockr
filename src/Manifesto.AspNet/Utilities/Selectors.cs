@@ -85,7 +85,7 @@ public static class Selectors
 
     public static bool Validate(IEnumerable<Selector> selectors, IDictionary<string, string> labels)
     {
-        return labels is not null 
+        return selectors.Any() && labels is not null
         ? selectors.Select(x => x switch
             {
                 Selector.Equality sel => labels.ContainsKey(sel.key) && labels[sel.key] == sel.value,

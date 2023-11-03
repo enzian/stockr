@@ -1,7 +1,6 @@
 namespace Manifesto.AspNet.Controllers;
 
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using dotnet_etcd.interfaces;
 using Etcdserverpb;
 using Google.Protobuf;
@@ -59,6 +58,7 @@ public class ManifestV1WatchController : ControllerBase
                         Key = dotnet_etcd.EtcdClient.GetStringByteForRangeRequests(keyspace),
                         RangeEnd = ByteString.CopyFromUtf8(dotnet_etcd.EtcdClient.GetRangeEnd(keyspace)),
                         ProgressNotify = true,
+                        PrevKv = true,
                         StartRevision = start_revision != null ? long.Parse(start_revision) : 0
                     }
                 },
@@ -68,10 +68,12 @@ public class ManifestV1WatchController : ControllerBase
 
             return Ok();
         }
-        catch (TaskCanceledException _){
+        catch (TaskCanceledException _)
+        {
             return new EmptyResult();
         }
-        catch (Exception e) {
+        catch (Exception e)
+        {
             logger.LogError(e, $"Failed to get resource {keyspace}");
             return new EmptyResult();
         }
@@ -88,24 +90,35 @@ public class ManifestV1WatchController : ControllerBase
             var revision = response.Header.Revision;
             foreach (var e in response.Events)
             {
-                var manifest = JsonSerializer.Deserialize<Manifest>(e.Kv.Value.ToStringUtf8());
-                // var metadata = manifest.Metadata is not null ? manifest.Metadata : null;
-                // metadata.Revision = revision.ToString();
-                var revisedManifest = manifest with {
-                    Metadata = manifest.Metadata with {
-                        Revision = revision.ToString() 
-                    }
-                };
-
-                if (Selectors.Validate(filters, manifest.Metadata.Labels))
+                if (e.Type != EventType.Delete)
                 {
-                    var watchEvent = e switch
+                    var manifest = JsonSerializer.Deserialize<Manifest>(e.Kv.Value.ToStringUtf8());
+                    // var metadata = manifest.Metadata is not null ? manifest.Metadata : null;
+                    // metadata.Revision = revision.ToString();
+                    var revisedManifest = manifest with
                     {
-                        { Type: EventType.Put, Kv.Version: 1 } => new WatchEvent { Type = "ADDED", Object = manifest },
-                        { Type: EventType.Put, Kv.Version: > 1 } => new WatchEvent { Type = "MODIFIED", Object = manifest },
-                        { Type: EventType.Delete } => new WatchEvent { Type = "DELETED", Object = manifest },
+                        Metadata = manifest.Metadata with
+                        {
+                            Revision = revision.ToString()
+                        }
                     };
 
+                    if (Selectors.Validate(filters, manifest.Metadata.Labels ?? new Dictionary<string, string>()))
+                    {
+                        var watchEvent = e switch
+                        {
+                            { Type: EventType.Put, Kv.Version: 1 } => new WatchEvent { Type = "ADDED", Object = manifest },
+                            { Type: EventType.Put, Kv.Version: > 1 } => new WatchEvent { Type = "MODIFIED", Object = manifest },
+                            { Type: EventType.Delete } => new WatchEvent { Type = "DELETED", Object = manifest },
+                        };
+
+                        await context.Response.WriteAsync($"{JsonSerializer.Serialize(watchEvent)}{Environment.NewLine}", cancellationToken);
+                    }
+                }
+                else
+                {
+                    var manifest = JsonSerializer.Deserialize<Manifest>(e.PrevKv.Value.ToStringUtf8());
+                    var watchEvent = new WatchEvent { Type = "DELETED", Object = manifest }; 
                     await context.Response.WriteAsync($"{JsonSerializer.Serialize(watchEvent)}{Environment.NewLine}", cancellationToken);
                 }
 

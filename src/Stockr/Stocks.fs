@@ -1,4 +1,5 @@
 module stock
+open api
 
 type Unit =
     | Unit of string
@@ -45,6 +46,12 @@ type ApiStock = {
     Material: string
     Amount: ApiStockAmount
 }
+
+type StockSpecManifest = 
+    { spec: ApiStock
+      metadata: Metadata }
+    interface Manifest with 
+        member this.metadata = this.metadata 
 
 let toApiStock (model: Stock) = 
     let (Quantity q) = model.Amount.qty

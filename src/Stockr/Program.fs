@@ -1,9 +1,14 @@
 open System.Net.Http
 open System
 open System.Threading
+open stock
+open api
 
-type StockSpec = { material: string; qty : string }
-type StockStatus = { B: string }
+type StockManifest = 
+    { spec: ApiStock
+      metadata: Metadata }
+    interface Manifest with 
+        member this.metadata = this.metadata 
 
 let client= new HttpClient()
 client.BaseAddress <- new Uri("https://localhost:7243/apis/")
@@ -12,7 +17,7 @@ client.BaseAddress <- new Uri("https://localhost:7243/apis/")
 let main argv = 
 
     let stockApi = 
-        api.ManifestsFor<StockSpec, StockStatus> 
+        ManifestsFor<StockManifest> 
             client
             "logistics.stockr.io/v1alpha1/stock"
     

@@ -3,6 +3,7 @@ module logistics
 open stock
 open locations
 open System
+open api
 
 
 type StockMovementError =
@@ -122,3 +123,17 @@ type StockMovementError =
 //                         | Error _ -> Error FailedToDropEmptySpace
 //                         | Ok _ -> Ok()
 //                     | _ -> Error FailedToMoveStock
+
+
+type StockManifest = 
+    { spec: ApiStock
+      metadata: Metadata }
+    interface Manifest with 
+        member this.metadata = this.metadata 
+
+let MoveQuantity (apiClient: api.ManifestApi<StockManifest>) fromStock toStock quantity =
+    let srcStockRes = apiClient.Get fromStock
+    let targetStockRes = apiClient.Get toStock
+
+    ()
+

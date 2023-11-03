@@ -105,4 +105,10 @@ public class SelectorTests
         
         Selectors.Validate(sel, dict).Should().Be(shouldMatch);
     }
+
+    [Fact]
+    public void ParseTest_ValidationWithNullSelector()
+    {
+        Selectors.Validate(Enumerable.Empty<Selector>(), new Dictionary<string, string>() {{"", ""}}).Should().Be(true);
+    }
 }

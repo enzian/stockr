@@ -25,22 +25,18 @@ type Metadata =
       annotations: Map<string, string> option
       revision: string option }
 
-type Manifest<'T, 'S> =
-    { kind: string
-      apigroup: string
-      apiversion: string
-      metadata: Metadata
-      spec: 'T option
-      status: 'S option }
+type Manifest = 
+    abstract member metadata: Metadata
 
-type Event<'T, 'S> =
-    | Update of Manifest<'T, 'S>
-    | Create of Manifest<'T, 'S>
-    | Delete of Manifest<'T, 'S>
 
-type WireEvent<'T, 'S> =
+type Event<'T when 'T :> Manifest> =
+    | Update of 'T
+    | Create of 'T
+    | Delete of 'T
+
+type WireEvent<'T> =
     { ``type``: string
-      object: Manifest<'T, 'S> }
+      object: 'T }
 
 
 let formatLabelFilter condition =
@@ -52,18 +48,18 @@ let formatLabelFilter condition =
     | (k, In values) -> sprintf "%s in (%s)" k (values |> String.concat ",")
     | (k, NotIn values) -> sprintf "%s in (%s)" k (values |> String.concat ",")
 
-type ManifestApi<'TSpec, 'TStatus> =
-    abstract Get: string -> Option<Manifest<'TSpec, 'TStatus>>
-    abstract List: seq<Manifest<'TSpec, 'TStatus>>
-    abstract FilterByLabel: (KeyIs seq -> Manifest<'TSpec, 'TStatus> seq)
-    abstract Watch: (CancellationToken -> Async<IObservable<Event<'TSpec, 'TStatus>>>)
-    abstract Put: (Manifest<'TSpec, 'TStatus> -> Result<unit, exn>)
+type ManifestApi<'T when 'T :> Manifest> =
+    abstract Get: string -> Option<'T>
+    abstract List: seq<'T>
+    abstract FilterByLabel: (KeyIs seq -> 'T seq)
+    abstract Watch: (CancellationToken -> Async<IObservable<Event<'T>>>)
+    abstract Put: ('T -> Result<unit, exn>)
     abstract Delete: (string -> Result<unit, exn>)
 
 let jsonOptions = new JsonSerializerOptions()
 jsonOptions.PropertyNameCaseInsensitive <- true
 
-let watchResource<'T, 'S> (client: HttpClient) uri (cts: CancellationToken) =
+let watchResource<'T when 'T :> Manifest> (client: HttpClient) uri (cts: CancellationToken) =
     async {
         let! responseSteam = client.GetStreamAsync(Path.Combine("watch/", uri)) |> Async.AwaitTask
 
@@ -83,7 +79,7 @@ let watchResource<'T, 'S> (client: HttpClient) uri (cts: CancellationToken) =
 
         return
             lineReaderObservable
-            |> Observable.map (fun line -> JsonSerializer.Deserialize<WireEvent<'T, 'S>>(line, jsonOptions))
+            |> Observable.map (fun line -> JsonSerializer.Deserialize<WireEvent<'T>>(line, jsonOptions))
             |> Observable.map (fun wireEvent ->
                 match wireEvent.``type`` with
                 | "MODIFIED" -> Update wireEvent.object
@@ -93,7 +89,7 @@ let watchResource<'T, 'S> (client: HttpClient) uri (cts: CancellationToken) =
     }
 
 
-let fetchWithKey<'TSpec, 'TStatus> httpClient path resourceKey =
+let fetchWithKey<'T when 'T :> Manifest> httpClient path resourceKey =
     try
         Some(
             http {
@@ -102,14 +98,14 @@ let fetchWithKey<'TSpec, 'TStatus> httpClient path resourceKey =
                 CacheControl "no-cache"
             }
             |> Request.send
-            |> Response.deserializeJson<Manifest<'TSpec, 'TStatus>>
+            |> Response.deserializeJson<'T>
         )
     with e ->
         printfn "%A" e
         None
 
 
-let listWithKey<'TSpec, 'TStatus> httpClient path =
+let listWithKey<'T when 'T :> Manifest> httpClient path =
     try
 
         http {
@@ -117,11 +113,11 @@ let listWithKey<'TSpec, 'TStatus> httpClient path =
             GET(Path.Combine(httpClient.BaseAddress.ToString(), path))
         }
         |> Request.send
-        |> Response.deserializeJson<seq<Manifest<'TSpec, 'TStatus>>>
+        |> Response.deserializeJson<seq<'T>>
     with _ ->
         Seq.empty
 
-let putManifest<'TSpec, 'TStatus> httpClient path (manifest: Manifest<'TSpec, 'TStatus>) =
+let putManifest<'T> httpClient path (manifest: 'T) =
     try
         http {
             config_transformHttpClient (fun _ -> httpClient)
@@ -136,7 +132,7 @@ let putManifest<'TSpec, 'TStatus> httpClient path (manifest: Manifest<'TSpec, 'T
     with e ->
         Error e
 
-let listWithFilter<'TSpec, 'TStatus> httpClient path (keyIs: KeyIs seq) =
+let listWithFilter<'T when 'T :> Manifest> httpClient path (keyIs: KeyIs seq) =
     try
         let filter = keyIs |> Seq.map formatLabelFilter |> String.concat ","
         http {
@@ -145,7 +141,7 @@ let listWithFilter<'TSpec, 'TStatus> httpClient path (keyIs: KeyIs seq) =
             query [("filter", filter)]
         }
         |> Request.send
-        |> Response.deserializeJson<seq<Manifest<'TSpec, 'TStatus>>>
+        |> Response.deserializeJson<seq<'T>>
     with _ ->
         Seq.empty
 
@@ -161,11 +157,11 @@ let dropManifest httpClient path key =
     with e ->
         Error e
 
-let ManifestsFor<'TSpec, 'TStatus> (httpClient: HttpClient) (path: string) =
-    { new ManifestApi<'TSpec, 'TStatus> with
+let ManifestsFor<'T when 'T :> Manifest> (httpClient: HttpClient) (path: string) =
+    { new ManifestApi<'T> with
         member _.Get key = fetchWithKey httpClient path key
         member _.List = listWithKey httpClient path
         member _.FilterByLabel = listWithFilter httpClient path
         member _.Watch = watchResource httpClient path
-        member _.Put = putManifest httpClient path 
+        member _.Put = putManifest httpClient path
         member _.Delete = dropManifest httpClient path }

@@ -27,6 +27,8 @@ module Program =
             match group, version, ``type`` with
             | "stocks.stockr.io", "v1alpha1", t when [ "stock"; "stocks" ] |> Seq.contains t 
                 -> "/registry/stocks.stockr.io/v1alpha1/stocks"
+            | "logistics.stockr.io", "v1alpha1", t when [ "production-orders"; "po" ] |> Seq.contains t 
+                -> "/registry/logistics.stockr.io/v1alpha1/productionorders"
             | _ -> null
         let resourceTTL _ _ _ = None
 

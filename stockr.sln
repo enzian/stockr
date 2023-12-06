@@ -7,6 +7,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{A3EB66C6-CCA
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Stockr.Api", "src\Stockr.Api\Stockr.Api.fsproj", "{0990E734-DCA6-4327-8B1E-21EA12BFC407}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Stockr.Controller", "src\Stockr.Controller\Stockr.Controller.fsproj", "{E74A1A6C-F7EC-43F9-BD47-B13A20934D37}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -20,8 +22,13 @@ Global
 		{0990E734-DCA6-4327-8B1E-21EA12BFC407}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0990E734-DCA6-4327-8B1E-21EA12BFC407}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0990E734-DCA6-4327-8B1E-21EA12BFC407}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E74A1A6C-F7EC-43F9-BD47-B13A20934D37}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E74A1A6C-F7EC-43F9-BD47-B13A20934D37}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E74A1A6C-F7EC-43F9-BD47-B13A20934D37}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E74A1A6C-F7EC-43F9-BD47-B13A20934D37}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{0990E734-DCA6-4327-8B1E-21EA12BFC407} = {A3EB66C6-CCA7-45F4-823B-E3F1B00CE913}
+		{E74A1A6C-F7EC-43F9-BD47-B13A20934D37} = {A3EB66C6-CCA7-45F4-823B-E3F1B00CE913}
 	EndGlobalSection
 EndGlobal

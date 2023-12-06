@@ -30,7 +30,6 @@ module Program =
             | _ -> null
         let resourceTTL _ _ _ = None
 
-
         app |> hosting.configureApp (api.v1.controllers.endpoints knownKeyspaces resourceTTL)
         app.Run()
         exitCode

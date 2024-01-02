@@ -23,16 +23,12 @@ let runController (ct: CancellationToken) client =
 
         let transportsApi =
             ManifestsFor<TransportFullManifest> client "logistics.stockr.io/v1alpha1/transports/"
-
         let transportsStatusApi =
             ManifestsFor<TransportFullManifest> client "logistics.stockr.io/v1alpha1/transports/status"
-
         let stocksApi =
             ManifestsFor<StockSpecManifest> client "stocks.stockr.io/v1alpha1/stocks/"
-
         let (aggregateTransports, transportChanges) =
             utilities.watchResourceOfType transportsApi ct
-
         let (aggregateStocks, _) = utilities.watchResourceOfType stocksApi ct
 
         aggregateTransports
@@ -41,11 +37,10 @@ let runController (ct: CancellationToken) client =
             match change with
             | Update x ->
                 let existingTransport = transports |> Map.find x.metadata.name
-
                 existingTransport.status.IsSome
-                && x.status.IsSome
-                && existingTransport.status.Value.state = "created"
-                && x.status.Value.state = "started"
+                    && x.status.IsSome
+                    && existingTransport.status.Value.state = "created"
+                    && x.status.Value.state = "started"
             | Create x -> x.status.IsSome && x.status.Value.state = "started"
             | _ -> false)
         |> withLatestFrom (fun a b -> (b, a)) aggregateStocks
@@ -103,11 +98,10 @@ let runController (ct: CancellationToken) client =
             match change with
             | Update x ->
                 let existingTransport = transports |> Map.find x.metadata.name
-
                 existingTransport.status.IsSome
-                && x.status.IsSome
-                && existingTransport.status.Value.state = "started"
-                && x.status.Value.state = "completed"
+                    && x.status.IsSome
+                    && existingTransport.status.Value.state = "started"
+                    && x.status.Value.state = "completed"
             | Create x -> x.status.IsSome && x.status.Value.state = "completed"
             | _ -> false)
         |> withLatestFrom (fun a b -> (b, a)) aggregateStocks
@@ -150,11 +144,10 @@ let runController (ct: CancellationToken) client =
             match change with
             | Update x ->
                 let existingTransport = transports |> Map.find x.metadata.name
-
                 existingTransport.status.IsSome
-                && x.status.IsSome
-                && existingTransport.status.Value.state = "completed"
-                && x.status.Value.state = "closed"
+                    && x.status.IsSome
+                    && existingTransport.status.Value.state = "completed"
+                    && x.status.Value.state = "closed"
             | Create x -> x.status.IsSome && x.status.Value.state = "closed"
             | _ -> false)
         |> withLatestFrom (fun a b -> (b, a)) aggregateStocks
@@ -192,9 +185,7 @@ let runController (ct: CancellationToken) client =
                                     |> Some } }
 
                 stocksApi.Put movedStock |> ignore
-            | None -> printfn "Transport %s closed, but no corresponding stock found" transport.metadata.name
-
-            ())
+            | None -> printfn "Transport %s closed, but no corresponding stock found" transport.metadata.name)
         |> ignore
 
         (Async.AwaitWaitHandle ct.WaitHandle) |> Async.RunSynchronously |> ignore

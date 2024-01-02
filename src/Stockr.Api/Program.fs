@@ -31,6 +31,8 @@ module Program =
                 -> "/registry/logistics.stockr.io/v1alpha1/productionorders"
             | "logistics.stockr.io", "v1alpha1", t when [ "transport"; "transports"; "tr" ] |> Seq.contains t 
                 -> "/registry/logistics.stockr.io/v1alpha1/transports"
+            | "logistics.stockr.io", "v1alpha1", t when [ "locations"; "lo" ; "location" ] |> Seq.contains t 
+                -> "/registry/logistics.stockr.io/v1alpha1/locations"
             | _ -> null
         let resourceTTL _ _ _ = None
 

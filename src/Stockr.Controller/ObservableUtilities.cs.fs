@@ -21,9 +21,9 @@ let watchResourceOfType<'T when 'T :> Manifest> (api: ManifestApi<'T>) (token: C
     let watchObs = api.WatchFromRevision startRevision token |> Async.RunSynchronously |> publish
     
     let aggregate = 
-        Observable.merge
+        merge
             (watchObs
-             |> Observable.scanInit (initialResources |> Seq.map (fun x -> (x.metadata.name, x)) |> Map.ofSeq) mapEventToDict)
+             |> scanInit (initialResources |> Seq.map (fun x -> (x.metadata.name, x)) |> Map.ofSeq) mapEventToDict)
             initialResourcesObs
     watchObs |> connect |> ignore
 

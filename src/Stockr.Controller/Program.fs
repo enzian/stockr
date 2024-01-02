@@ -39,11 +39,7 @@ let main argv =
             | "ProductionOrderTransport" -> 
                 production_order_controller.runController token client
             | "StockLocation" -> 
-                async {
-                    printfn "Starting StockLocation"
-                    (Async.AwaitWaitHandle token.WaitHandle) |> Async.RunSynchronously |> ignore
-                    printfn "Stopped StockLocation"
-                }
+                stock_controller.runController token client
             | "TransportOrderController" -> 
                 transport_order_controller.runController token client
     )

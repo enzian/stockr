@@ -6,8 +6,10 @@
   <ItemGroup>
     <Compile Include="Measurement.fs" />
     <Compile Include="Stock.fs" />
+    <Compile Include="Location.fs" />
     <Compile Include="Transport.fs" />
     <Compile Include="ObservableUtilities.cs.fs" />
+    <Compile Include="StockController.fs" />
     <Compile Include="ProductionOrderController.fs" />
     <Compile Include="TransportController.fs" />
     <Compile Include="Program.fs" />

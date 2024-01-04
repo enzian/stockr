@@ -20,7 +20,11 @@ let AddInitalTransportStatus (apiClient: ManifestApi<TransportFullManifest>) x =
         apiClient.Put transportWithStatus |> ignore
     | None -> ()
 
-let startTransport (stocksApi : ManifestApi<StockSpecManifest>) (x : Event<TransportFullManifest>) (stocks : Map<string, StockSpecManifest>) (logger : IEventLogger) = 
+let startTransport 
+    (stocksApi : ManifestApi<StockSpecManifest>)
+    (x : Event<TransportFullManifest>)
+    (stocks : Map<string, StockSpecManifest>)
+    (logger : IEventLogger) = 
     match x with
     | Update x
     | Create x ->
@@ -86,7 +90,11 @@ let startTransport (stocksApi : ManifestApi<StockSpecManifest>) (x : Event<Trans
     | _ -> ()
 
 
-let completeTransport logger (event: Event<TransportFullManifest>) (stocks : Map<string, StockSpecManifest>) (stocksApi : ManifestApi<StockSpecManifest>) = 
+let completeTransport 
+    logger 
+    (event: Event<TransportFullManifest>)
+    (stocks : Map<string, StockSpecManifest>)
+    (stocksApi : ManifestApi<StockSpecManifest>) = 
     let transport =
         match event with
         | Update x
@@ -147,7 +155,11 @@ let completeTransport logger (event: Event<TransportFullManifest>) (stocks : Map
                 "Transport %s completed, but no stock found"
                 transport.metadata.name)
 
-let closeTransport logger event (stocks : Map<string, StockSpecManifest>) (stocksApi : ManifestApi<StockSpecManifest>) = 
+let closeTransport 
+    logger
+    event
+    (stocks : Map<string, StockSpecManifest>)
+    (stocksApi : ManifestApi<StockSpecManifest>) = 
     let transport =
         match event with
         | Update x

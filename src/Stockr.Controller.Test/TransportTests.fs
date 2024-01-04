@@ -122,3 +122,85 @@ let ``if a transport already has a stock reserved, not action is taken`` () =
      transport_order_controller.startTransport stockApi (Create transport) stocks logger
 
      putted |> should be Empty
+
+[<Fact>]
+let ``Stocks are moved to the target location when the transport is completed`` () =
+     let transport : TransportFullManifest = { 
+          metadata = { 
+               name = "transport1";
+               labels = None;
+               ``namespace`` = None;
+               annotations = None;
+               revision = Some "0" };
+          spec = { 
+               material = "A";
+               quantity = "1pcs";
+               source = stock_10pcs_A_1.metadata.name;
+               target = "2";
+               cancellationRequested = false;
+               }
+          status = Some { state = "completed"}}
+     let reservedStock = {
+          stock_10pcs_A_1 with
+               metadata.labels = Some (Map.ofList [(stockTransportReservation, transport.metadata.name)])}
+     let stocks = Map.ofList [(stock_10pcs_A_1.metadata.name, reservedStock)]
+
+     let mutable putted = [];
+
+     let stockApi = {
+          new ManifestApi<StockSpecManifest> with
+               member _.Get _ = None
+               member _.Delete = (fun _ -> Ok ())
+               member _.List = []
+               member _.FilterByLabel = (fun _ -> [])
+               member _.Put = (fun x ->
+                    putted <- putted @ [x]
+                    Ok ())
+               member _.WatchFromRevision = (fun _ _ -> async { return Observable.empty })
+               member _.Watch = (fun _ -> async { return Observable.empty })
+     }
+     
+     transport_order_controller.completeTransport logger (Create transport) stocks stockApi
+
+     putted |> Seq.head |> (fun x -> x.spec.location) |> should equal transport.spec.target
+
+[<Fact>]
+let ``Reservation labels are removed from stocks once transports are closed`` () =
+     let transport : TransportFullManifest = { 
+          metadata = { 
+               name = "transport1";
+               labels = None;
+               ``namespace`` = None;
+               annotations = None;
+               revision = Some "0" };
+          spec = { 
+               material = "A";
+               quantity = "1pcs";
+               source = stock_10pcs_A_1.metadata.name;
+               target = "2";
+               cancellationRequested = false;
+               }
+          status = Some { state = "closed"}}
+     let reservedStock = {
+          stock_10pcs_A_1 with
+               metadata.labels = Some (Map.ofList [(stockTransportReservation, transport.metadata.name)])}
+     let stocks = Map.ofList [(stock_10pcs_A_1.metadata.name, reservedStock)]
+
+     let mutable putted = [];
+
+     let stockApi = {
+          new ManifestApi<StockSpecManifest> with
+               member _.Get _ = None
+               member _.Delete = (fun _ -> Ok ())
+               member _.List = []
+               member _.FilterByLabel = (fun _ -> [])
+               member _.Put = (fun x ->
+                    putted <- putted @ [x]
+                    Ok ())
+               member _.WatchFromRevision = (fun _ _ -> async { return Observable.empty })
+               member _.Watch = (fun _ -> async { return Observable.empty })
+     }
+     
+     transport_order_controller.closeTransport logger (Create transport) stocks stockApi
+
+     putted |> Seq.head |> (fun x -> x.metadata.labels.Value) |> should be Empty

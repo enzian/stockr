@@ -1,10 +1,16 @@
 module utilities
-
+open System
 open api
 open System.Threading
 open FSharp.Control.Reactive
 open utilities
 open FSharp.Control.Reactive.Observable
+
+let randomStr n = 
+    let r = Random()
+    let chars = Array.concat([[|'a' .. 'z'|];[|'A' .. 'Z'|];[|'0' .. '9'|]])
+    let sz = Array.length chars in
+    String(Array.init n (fun _ -> chars.[r.Next sz]))
 
 let appendToDict<'T when 'T :> Manifest> (d: Map<string, 'T>) (e: Event<'T>) =
     match e with
@@ -28,4 +34,3 @@ let watchResourceOfType<'T when 'T :> Manifest> (api: ManifestApi<'T>) (token: C
     watchObs |> connect |> ignore
 
     (aggregate, watchObs)
-

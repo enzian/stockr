@@ -4,11 +4,12 @@
     <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Utilities.fs" />
+    <Compile Include="Events.fs" />
     <Compile Include="Measurement.fs" />
     <Compile Include="Stock.fs" />
     <Compile Include="Location.fs" />
     <Compile Include="Transport.fs" />
-    <Compile Include="ObservableUtilities.cs.fs" />
     <Compile Include="StockController.fs" />
     <Compile Include="ProductionOrderController.fs" />
     <Compile Include="TransportController.fs" />
@@ -17,6 +18,6 @@
   <ItemGroup>
     <PackageReference Include="Argu" Version="6.1.1" />
     <PackageReference Include="FSharp.Control.Reactive" Version="5.0.5" />
-    <PackageReference Include="Manifesto.AspNet.Client" Version="0.0.2" />
+    <PackageReference Include="Manifesto.AspNet.Client" Version="0.0.4" />
   </ItemGroup>
 </Project>

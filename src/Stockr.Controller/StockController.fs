@@ -5,16 +5,16 @@ open api
 open location
 open stock
 open FSharp.Control.Reactive.Observable
+open events
 
 let runController (ct: CancellationToken) client =
     async {
         printfn "Starting ProductionOrderController"
 
         let stocksApi =
-            ManifestsFor<StockSpecManifest> client "stocks.stockr.io/v1alpha1/stocks/"
-
+            ManifestsFor<StockSpecManifest> client (sprintf "%s/%s/%s/" stock.apiGroup stock.apiVersion stock.apiKind)
         let locationsApi =
-            ManifestsFor<LocationsSpecManifest> client "logistics.stockr.io/v1alpha1/locations/"
+            ManifestsFor<LocationsSpecManifest> client (sprintf "%s/%s/%s/" location.apiGroup location.apiVersion location.apiKind)
 
         //setup the rective pipelines that feed data from the resource API.
         let (locations, _) = utilities.watchResourceOfType locationsApi ct

@@ -21,7 +21,7 @@ let stock_10pcs_A_1 : StockSpecManifest = {
           location = "1";
           }}
 
-let fakeApi <'T when 'T :> Manifest> = {
+let fakeApi<'T when 'T :> Manifest> = {
      new ManifestApi<'T> with
           member _.Get _ = None
           member _.Delete = (fun _ -> Ok ())
@@ -77,10 +77,48 @@ let ``Stocks on source locations are split when the transport is started`` () =
      }
 
      transport_order_controller.startTransport stockApi (Create transport) stocks logger
+
      putted |> Seq.head |> (fun x -> x.spec.quantity) |> should equal "9.00pcs"
      putted |> Seq.last |> (fun x -> x.spec.quantity) |> should equal "1.00pcs"
      putted |> Seq.last |> (fun x -> x.metadata.labels) |> should equal (Map.ofList [(stockTransportReservation, transport.metadata.name)] |> Some)
 
 [<Fact>]
-let ``Adding all quantities must return sum of all transport quantities`` () =
-     ()
+let ``if a transport already has a stock reserved, not action is taken`` () =
+     let transport : TransportFullManifest = { 
+          metadata = { 
+               name = "transport1";
+               labels = None;
+               ``namespace`` = None;
+               annotations = None;
+               revision = Some "0" };
+          spec = { 
+               material = "A";
+               quantity = "1pcs";
+               source = stock_10pcs_A_1.metadata.name;
+               target = "2";
+               cancellationRequested = false;
+               }
+          status = None}
+     let reservedStock = {
+          stock_10pcs_A_1 with
+               metadata.labels = Some (Map.ofList [(stockTransportReservation, transport.metadata.name)])}
+     let stocks = Map.ofList [(stock_10pcs_A_1.metadata.name, reservedStock)]
+
+     let mutable putted = [];
+
+     let stockApi = {
+          new ManifestApi<StockSpecManifest> with
+               member _.Get _ = None
+               member _.Delete = (fun _ -> Ok ())
+               member _.List = []
+               member _.FilterByLabel = (fun _ -> [])
+               member _.Put = (fun x ->
+                    putted <- putted @ [x]
+                    Ok ())
+               member _.WatchFromRevision = (fun _ _ -> async { return Observable.empty })
+               member _.Watch = (fun _ -> async { return Observable.empty })
+     }
+
+     transport_order_controller.startTransport stockApi (Create transport) stocks logger
+
+     putted |> should be Empty

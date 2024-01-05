@@ -224,71 +224,8 @@ let closeTransport
             (sprintf
                 "Transport %s closed, but no corresponding stock found"
                 transport.metadata.name)
+let cleanupTransports (stocks : StockSpecManifest seq) transports logger (transportsApi : ManifestApi<TransportFullManifest>) (stocksApi : ManifestApi<StockSpecManifest>) =
 
-let runController (ct: CancellationToken) client =
-    async {
-        printfn "Starting TransportOrderController"
-
-        let transportsApi =
-            ManifestsFor<TransportFullManifest>
-                client
-                (sprintf "%s/%s/%s/" transportation.apiGroup transportation.apiVersion transportation.apiKind)
-
-        let stocksApi =
-            ManifestsFor<StockSpecManifest> client (sprintf "%s/%s/%s/" stock.apiGroup stock.apiVersion stock.apiKind)
-
-        let (aggregateTransports, transportChanges) =
-            utilities.watchResourceOfType transportsApi ct
-
-        let (aggregateStocks, _) = utilities.watchResourceOfType stocksApi ct
-
-        let eventsApi =
-            ManifestsFor<EventSpecManifest> client (sprintf "%s/%s/%s/" events.apiGroup events.apiVersion events.apiKind)
-
-        let eventFactory () =
-            emptyEvent
-            |> withCurrentTime
-            |> withComponent "stockr-controller"
-            |> withReportingInstance (System.Net.Dns.GetHostName())
-        let logger = newEventLogger eventsApi eventFactory
-
-        let statusTransition from target (change, transports) =
-            match change with
-            | Update x ->
-                let existingTransport = transports |> Map.find x.metadata.name
-
-                existingTransport.status.IsSome
-                && x.status.IsSome
-                && existingTransport.status.Value.state = from
-                && x.status.Value.state = target
-            | Create x -> x.status.IsSome && x.status.Value.state = target
-            | _ -> false
-        
-        aggregateTransports
-        |> combineLatest transportChanges
-        |> filter (statusTransition "created" "started")
-        |> withLatestFrom (fun a b -> (b, a)) aggregateStocks
-        |> subscribe (fun (stocks, (x, _)) -> startTransport stocksApi x stocks logger )
-        |> ignore
-
-        aggregateTransports
-        |> combineLatest transportChanges
-        |> filter (statusTransition "started" "completed")
-        |> withLatestFrom (fun a b -> (b, a)) aggregateStocks
-        |> subscribe (fun (stocks, (event, _)) -> completeTransport logger event stocks stocksApi)
-        |> ignore
-
-        aggregateTransports
-        |> combineLatest transportChanges
-        |> filter (statusTransition "completed" "closed")
-        |> withLatestFrom (fun a b -> (b, a)) aggregateStocks
-        |> subscribe (fun (stocks, (event, _)) -> closeTransport logger event stocks stocksApi )
-        |> ignore
-    
-        interval (TimeSpan.FromSeconds(5.0))
-        |> combineLatest (aggregateTransports |> map (fun x -> x.Values))
-        |> combineLatest (aggregateStocks |> map (fun x -> x.Values))
-        |> subscribe (fun (stocks, (transports, _)) -> 
             let closedTransports = 
                 transports
                 |> Seq.filter (fun x -> x.status.IsSome && x.status.Value.state = "closed")
@@ -367,8 +304,72 @@ let runController (ct: CancellationToken) client =
                     deleteTransport transport.metadata.name
                 | None ->
                     deleteTransport transport.metadata.name
-                 
-        ) |> ignore
+
+let runController (ct: CancellationToken) client =
+    async {
+        printfn "Starting TransportOrderController"
+
+        let transportsApi =
+            ManifestsFor<TransportFullManifest>
+                client
+                (sprintf "%s/%s/%s/" transportation.apiGroup transportation.apiVersion transportation.apiKind)
+
+        let stocksApi =
+            ManifestsFor<StockSpecManifest> client (sprintf "%s/%s/%s/" stock.apiGroup stock.apiVersion stock.apiKind)
+
+        let (aggregateTransports, transportChanges) =
+            utilities.watchResourceOfType transportsApi ct
+
+        let (aggregateStocks, _) = utilities.watchResourceOfType stocksApi ct
+
+        let eventsApi =
+            ManifestsFor<EventSpecManifest> client (sprintf "%s/%s/%s/" events.apiGroup events.apiVersion events.apiKind)
+
+        let eventFactory () =
+            emptyEvent
+            |> withCurrentTime
+            |> withComponent "stockr-controller"
+            |> withReportingInstance (System.Net.Dns.GetHostName())
+        let logger = newEventLogger eventsApi eventFactory
+
+        let statusTransition from target (change, transports) =
+            match change with
+            | Update x ->
+                let existingTransport = transports |> Map.find x.metadata.name
+
+                existingTransport.status.IsSome
+                && x.status.IsSome
+                && existingTransport.status.Value.state = from
+                && x.status.Value.state = target
+            | Create x -> x.status.IsSome && x.status.Value.state = target
+            | _ -> false
+        
+        aggregateTransports
+        |> combineLatest transportChanges
+        |> filter (statusTransition "created" "started")
+        |> withLatestFrom (fun a b -> (b, a)) aggregateStocks
+        |> subscribe (fun (stocks, (x, _)) -> startTransport stocksApi x stocks logger )
+        |> ignore
+
+        aggregateTransports
+        |> combineLatest transportChanges
+        |> filter (statusTransition "started" "completed")
+        |> withLatestFrom (fun a b -> (b, a)) aggregateStocks
+        |> subscribe (fun (stocks, (event, _)) -> completeTransport logger event stocks stocksApi)
+        |> ignore
+
+        aggregateTransports
+        |> combineLatest transportChanges
+        |> filter (statusTransition "completed" "closed")
+        |> withLatestFrom (fun a b -> (b, a)) aggregateStocks
+        |> subscribe (fun (stocks, (event, _)) -> closeTransport logger event stocks stocksApi )
+        |> ignore
+    
+        interval (TimeSpan.FromSeconds(5.0))
+        |> combineLatest (aggregateTransports |> map (fun x -> x.Values))
+        |> combineLatest (aggregateStocks |> map (fun x -> x.Values))
+        |> subscribe (fun (stocks, (transports, _)) -> cleanupTransports stocks transports logger transportsApi stocksApi)
+        |> ignore
 
         (Async.AwaitWaitHandle ct.WaitHandle) |> Async.RunSynchronously |> ignore
         printfn "Stopped TransportOrderController"

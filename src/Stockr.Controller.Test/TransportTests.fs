@@ -11,7 +11,7 @@ open FSharp.Control.Reactive
 let stock_10pcs_A_1 : StockSpecManifest = { 
      metadata = { 
           name = "10pcs_ofA_on1";
-          labels = None
+          labels = Some Map.empty
           ``namespace`` = None;
           annotations = None;
           revision = Some "0" };
@@ -204,3 +204,102 @@ let ``Reservation labels are removed from stocks once transports are closed`` ()
      transport_order_controller.closeTransport logger (Create transport) stocks stockApi
 
      putted |> Seq.head |> (fun x -> x.metadata.labels.Value) |> should be Empty
+
+[<Fact>]
+let ``Closed Transports are deleted when cleanup runs and they have no reserved stocks`` () =
+     let transport : TransportFullManifest = { 
+          metadata = { 
+               name = "transport1";
+               labels = None;
+               ``namespace`` = None;
+               annotations = None;
+               revision = Some "0" };
+          spec = { 
+               material = "A";
+               quantity = "1pcs";
+               source = stock_10pcs_A_1.metadata.name;
+               target = "2";
+               cancellationRequested = false;
+               }
+          status = Some { state = "closed"}}
+     let stockApi = {
+          new ManifestApi<StockSpecManifest> with
+               member _.Get _ = None
+               member _.Delete = (fun _ -> Ok ())
+               member _.List = []
+               member _.FilterByLabel = (fun _ -> [])
+               member _.Put = (fun x -> Ok ())
+               member _.WatchFromRevision = (fun _ _ -> async { return Observable.empty })
+               member _.Watch = (fun _ -> async { return Observable.empty })
+     }
+     let mutable deleted = [];
+     let transportsApi = {
+          new ManifestApi<TransportFullManifest> with
+               member _.Get _ = None
+               member _.Delete = (fun x -> 
+                    deleted <- deleted @ [x]
+                    Ok ())
+               member _.List = []
+               member _.FilterByLabel = (fun _ -> [])
+               member _.Put = (fun x -> Ok ())
+               member _.WatchFromRevision = (fun _ _ -> async { return Observable.empty })
+               member _.Watch = (fun _ -> async { return Observable.empty })
+     }
+     
+
+     transport_order_controller.cleanupTransports [stock_10pcs_A_1] [transport] logger transportsApi stockApi
+     
+     deleted |> should equal [transport.metadata.name]
+
+[<Fact>]
+let ``Closed Transports with reserved stocks are deleted after the reservation was removed from the stock`` () =
+     let transport : TransportFullManifest = { 
+          metadata = { 
+               name = "transport1";
+               labels = None;
+               ``namespace`` = None;
+               annotations = None;
+               revision = Some "0" };
+          spec = { 
+               material = "A";
+               quantity = "1pcs";
+               source = stock_10pcs_A_1.metadata.name;
+               target = "2";
+               cancellationRequested = false;
+               }
+          status = Some { state = "closed"}}
+     let reservedStock = {
+          stock_10pcs_A_1 with
+               metadata.labels = Some (Map.ofList [(stockTransportReservation, transport.metadata.name)])}
+     let mutable updatedStocks = [];
+     let stockApi = {
+          new ManifestApi<StockSpecManifest> with
+               member _.Get _ = None
+               member _.Delete = (fun _ -> Ok ())
+               member _.List = []
+               member _.FilterByLabel = (fun _ -> [])
+               member _.Put = (fun x -> 
+                    updatedStocks <- updatedStocks @ [x]
+                    Ok ())
+               member _.WatchFromRevision = (fun _ _ -> async { return Observable.empty })
+               member _.Watch = (fun _ -> async { return Observable.empty })
+     }
+     let mutable deleted = [];
+     let transportsApi = {
+          new ManifestApi<TransportFullManifest> with
+               member _.Get _ = None
+               member _.Delete = (fun x -> 
+                    deleted <- deleted @ [x]
+                    Ok ())
+               member _.List = []
+               member _.FilterByLabel = (fun _ -> [])
+               member _.Put = (fun x -> Ok ())
+               member _.WatchFromRevision = (fun _ _ -> async { return Observable.empty })
+               member _.Watch = (fun _ -> async { return Observable.empty })
+     }
+     
+
+     transport_order_controller.cleanupTransports [reservedStock] [transport] logger transportsApi stockApi
+     
+     deleted |> should equal [transport.metadata.name]
+     updatedStocks |> should equal [stock_10pcs_A_1]

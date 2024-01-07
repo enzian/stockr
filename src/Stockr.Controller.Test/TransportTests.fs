@@ -54,7 +54,7 @@ let ``Stocks on source locations are split when the transport is started`` () =
           spec = { 
                material = "A";
                quantity = "1pcs";
-               source = stock_10pcs_A_1.metadata.name;
+               source = Some stock_10pcs_A_1.metadata.name;
                target = "2";
                cancellationRequested = false;
                }
@@ -94,7 +94,7 @@ let ``if a transport already has a stock reserved, not action is taken`` () =
           spec = { 
                material = "A";
                quantity = "1pcs";
-               source = stock_10pcs_A_1.metadata.name;
+               source = Some stock_10pcs_A_1.metadata.name;
                target = "2";
                cancellationRequested = false;
                }
@@ -135,11 +135,11 @@ let ``Stocks are moved to the target location when the transport is completed`` 
           spec = { 
                material = "A";
                quantity = "1pcs";
-               source = stock_10pcs_A_1.metadata.name;
+               source = Some stock_10pcs_A_1.metadata.name;
                target = "2";
                cancellationRequested = false;
                }
-          status = Some { state = "completed"}}
+          status = Some { state = "completed" ; reason = None}}
      let reservedStock = {
           stock_10pcs_A_1 with
                metadata.labels = Some (Map.ofList [(stockTransportReservation, transport.metadata.name)])}
@@ -176,11 +176,11 @@ let ``Reservation labels are removed from stocks once transports are closed`` ()
           spec = { 
                material = "A";
                quantity = "1pcs";
-               source = stock_10pcs_A_1.metadata.name;
+               source = Some stock_10pcs_A_1.metadata.name;
                target = "2";
                cancellationRequested = false;
                }
-          status = Some { state = "closed"}}
+          status = Some { state = "closed" ; reason = None}}
      let reservedStock = {
           stock_10pcs_A_1 with
                metadata.labels = Some (Map.ofList [(stockTransportReservation, transport.metadata.name)])}
@@ -217,11 +217,11 @@ let ``Closed Transports are deleted when cleanup runs and they have no reserved 
           spec = { 
                material = "A";
                quantity = "1pcs";
-               source = stock_10pcs_A_1.metadata.name;
+               source = Some stock_10pcs_A_1.metadata.name;
                target = "2";
                cancellationRequested = false;
                }
-          status = Some { state = "closed"}}
+          status = Some { state = "closed" ; reason = None}}
      let stockApi = {
           new ManifestApi<StockSpecManifest> with
                member _.Get _ = None
@@ -263,11 +263,11 @@ let ``Closed Transports with reserved stocks are deleted after the reservation w
           spec = { 
                material = "A";
                quantity = "1pcs";
-               source = stock_10pcs_A_1.metadata.name;
+               source = Some stock_10pcs_A_1.metadata.name;
                target = "2";
                cancellationRequested = false;
                }
-          status = Some { state = "closed"}}
+          status = Some { state = "closed" ; reason = None}}
      let reservedStock = {
           stock_10pcs_A_1 with
                metadata.labels = Some (Map.ofList [(stockTransportReservation, transport.metadata.name)])}

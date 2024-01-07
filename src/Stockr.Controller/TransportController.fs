@@ -16,9 +16,17 @@ let inline toMap kvps =
 let AddInitalTransportStatus (apiClient: ManifestApi<TransportFullManifest>) x =
     match x |> Seq.tryHead with
     | Some transport ->
-        let transportWithStatus = { transport with status = Some { state = "created" } }
+        let transportWithStatus = { transport with status = Some { state = "created" ; reason = None } }
         apiClient.Put transportWithStatus |> ignore
     | None -> ()
+
+
+let transportObjRef : ObjectReference = { 
+    kind = api.Kind
+    group = api.Group
+    name = ""
+    apiVersion = api.Version
+    resourceVersion = "" }
 
 let startTransport 
     (stocksApi : ManifestApi<StockSpecManifest>)
@@ -26,22 +34,22 @@ let startTransport
     (stocks : Map<string, StockSpecManifest>)
     (logger : IEventLogger) = 
     match x with
-    | Update x
-    | Create x ->
+    | Update transport
+    | Create transport ->
         let existingTransportStock =
             stocks
             |> Map.tryFindKey (fun k v ->
                 v.metadata.labels
                 |> Option.defaultValue Map.empty
                 |> Map.tryFind stockTransportReservation
-                |> Option.exists ((=) x.metadata.name))
+                |> Option.exists ((=) transport.metadata.name))
         
         let objectReference : ObjectReference = { 
-            kind = transportation.apiKind
-            group = transportation.apiGroup
-            name = x.metadata.name
-            apiVersion = transportation.apiVersion
-            resourceVersion = x.metadata.revision.Value }
+            kind = api.Kind
+            group = api.Group
+            name = transport.metadata.name
+            apiVersion = api.Version
+            resourceVersion = transport.metadata.revision.Value }
         let logger = logger |> customize (fun e -> e |> regarding objectReference  )
 
         if existingTransportStock.IsSome then
@@ -49,44 +57,50 @@ let startTransport
                 "StockExists"
                 (sprintf
                     "Stock for transport %s already exists: %s, skipping stocks split."
-                    x.metadata.name
+                    transport.metadata.name
                     existingTransportStock.Value)
         else
             logger.Info
                 "NoDedicatedStockExists"
-                (sprintf "Stock for transport %s does not exist, splitting stock..." x.metadata.name)
+                (sprintf "Stock for transport %s does not exist, splitting stock..." transport.metadata.name)
 
-            let stock = stocks |> Map.find x.spec.source
-            let (Some (stockQty, stockUnit)) = stock.spec.quantity |> amountFromString
-            let (Some (transportQty, transportUnit)) = x.spec.quantity |> amountFromString
+            match transport.spec.source with
+            | None ->
+                logger.Error
+                    "NoSourceSpecified"
+                    (sprintf "Transport %s has no source specified, cannot split stock" transport.metadata.name)
+            | Some source ->
+                let stock = stocks |> Map.find source
+                let (Some (stockQty, stockUnit)) = stock.spec.quantity |> amountFromString
+                let (Some (transportQty, transportUnit)) = transport.spec.quantity |> amountFromString
 
-            let updatedStock =
-                { stock with
-                    spec.quantity =
-                        (stockQty - (transportQty |> convert transportUnit stockUnit), stockUnit) |> toString }
+                let updatedStock =
+                    { stock with
+                        spec.quantity =
+                            (stockQty - (transportQty |> convert transportUnit stockUnit), stockUnit) |> toString }
 
-            stocksApi.Put updatedStock |> ignore
+                stocksApi.Put updatedStock |> ignore
 
-            let newStock =
-                { stock with
-                    metadata.name = x.metadata.name
-                    metadata.labels =
-                        stock.metadata.labels
-                        |> Option.defaultValue Map.empty
-                        |> Map.add stockTransportReservation x.metadata.name
-                        |> Some
-                    spec.quantity = (transportQty, transportUnit) |> toString }
+                let newStock =
+                    { stock with
+                        metadata.name = transport.metadata.name
+                        metadata.labels =
+                            stock.metadata.labels
+                            |> Option.defaultValue Map.empty
+                            |> Map.add stockTransportReservation transport.metadata.name
+                            |> Some
+                        spec.quantity = (transportQty, transportUnit) |> toString }
 
-            match stocksApi.Put newStock with
-            | Ok _ ->
-                logger.Info
-                    "StockSplit"
-                    (sprintf
-                        "Stock %s split into %s and %s"
-                        stock.metadata.name
-                        stock.metadata.name
-                        newStock.metadata.name)
-            | Error e -> logger.Error "StockSplitError" (sprintf "Failed to split stock: \n%A" e)
+                match stocksApi.Put newStock with
+                | Ok _ ->
+                    logger.Info
+                        "StockSplit"
+                        (sprintf
+                            "Stock %s split into %s and %s"
+                            stock.metadata.name
+                            stock.metadata.name
+                            newStock.metadata.name)
+                | Error e -> logger.Error "StockSplitError" (sprintf "Failed to split stock: \n%A" e)
     | _ -> ()
 
 
@@ -103,11 +117,9 @@ let completeTransport
 
     let logObjRef event =
         event |> regarding
-            { kind = transportation.apiKind
-              group = transportation.apiGroup
-              name = transport.metadata.name
-              apiVersion = transportation.apiVersion
-              resourceVersion = transport.metadata.revision.Value }
+            { transportObjRef with
+                name = transport.metadata.name
+                resourceVersion = transport.metadata.revision.Value }
     let logger = logger |> customize (logObjRef)
 
     let stock =
@@ -177,11 +189,9 @@ let closeTransport
     
     let logObjRef event =
         event |> regarding
-            { kind = transportation.apiKind
-              group = transportation.apiGroup
-              name = transport.metadata.name
-              apiVersion = transportation.apiVersion
-              resourceVersion = transport.metadata.revision.Value }
+            { transportObjRef with
+                name = transport.metadata.name
+                resourceVersion = transport.metadata.revision.Value }
     let log = logger |> customize (logObjRef)
 
     match stock with
@@ -242,11 +252,9 @@ let cleanupTransports (stocks : StockSpecManifest seq) transports logger (transp
                     logger 
                     |> customize (fun e -> 
                         e 
-                        |> regarding { kind = transportation.apiKind
-                                       group = transportation.apiGroup
-                                       name = transport.metadata.name
-                                       apiVersion = transportation.apiVersion
-                                       resourceVersion = transport.metadata.revision.Value })
+                        |> regarding { transportObjRef with
+                                        name = transport.metadata.name
+                                        resourceVersion = transport.metadata.revision.Value })
 
                 let deleteTransport transport =
                     match transportsApi.Delete transport with
@@ -267,11 +275,9 @@ let cleanupTransports (stocks : StockSpecManifest seq) transports logger (transp
                 | Some stock ->
                     let logger = logger |> customize (fun e -> 
                         e 
-                        |> regarding { kind = transportation.apiKind
-                                       group = transportation.apiGroup
-                                       name = transport.metadata.name
-                                       apiVersion = transportation.apiVersion
-                                       resourceVersion = transport.metadata.revision.Value })
+                        |> regarding { transportObjRef with
+                                        name = transport.metadata.name
+                                        resourceVersion = transport.metadata.revision.Value })
                     logger.Info
                         "TransportHasReservedStock"
                         (sprintf
@@ -312,7 +318,11 @@ let runController (ct: CancellationToken) client =
         let transportsApi =
             ManifestsFor<TransportFullManifest>
                 client
-                (sprintf "%s/%s/%s/" transportation.apiGroup transportation.apiVersion transportation.apiKind)
+                (sprintf "%s/%s/%s/" api.Group api.Version api.Kind)
+        let transportStatusApi =
+            ManifestsFor<TransportFullManifest>
+                client
+                (sprintf "%s/%s/%s/status" api.Group api.Version api.Kind)
 
         let stocksApi =
             ManifestsFor<StockSpecManifest> client (sprintf "%s/%s/%s/" stock.apiGroup stock.apiVersion stock.apiKind)
@@ -343,6 +353,25 @@ let runController (ct: CancellationToken) client =
                 && x.status.Value.state = target
             | Create x -> x.status.IsSome && x.status.Value.state = target
             | _ -> false
+        
+        transportChanges
+        |> choose (fun (change) ->
+            match change with
+            | Update x -> Some x
+            | Create x -> Some x
+            | _ -> None)
+        |> filter (fun change -> change.spec.source.IsNone)
+        |> subscribe (fun x -> 
+            let logObjRef event = event |> relatedTo { transportObjRef with
+                                                           name = x.metadata.name
+                                                           resourceVersion = x.metadata.revision.Value }
+            let logger = logger |> customize (logObjRef)
+            let pendingTransport = { x with status = Some { state = "pending" ; reason = reasons.NoStockWithSufficientQuantity } }
+            match transportStatusApi.Put pendingTransport with
+            | Ok _ -> logger.Info "TransportSetToPending" "Transport set to pending because no stock with sufficient quantity was found"
+            | Error e -> logger.Error "TransportStatusUpdateError" (sprintf "Failed to update transport status: \n%A" e)
+            )
+        |> ignore
         
         aggregateTransports
         |> combineLatest transportChanges

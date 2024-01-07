@@ -5,20 +5,25 @@ open measurement
 
 let stockTransportReservation = "logistics.stockr.io/transport-order"
 
-let apiVersion = "v1alpha1"
-let apiGroup = "logistics.stockr.io"
-let apiKind = "transport"
+module api = 
+    let Version = "v1alpha1"
+    let Group = "logistics.stockr.io"
+    let Kind = "transport"
+
+module reasons =
+    let NoStockWithSufficientQuantity = Some "NoStockWithSufficientQuantity"
 
 type TransportSpec = {
     material: string
     quantity: string
-    source: string
+    source: string option
     target: string
     cancellationRequested: bool
 }
 
 type TransportStatus = {
     state: string
+    reason: string option
 }
 
 type TransportSpecManifest = 
@@ -26,13 +31,6 @@ type TransportSpecManifest =
       metadata: Metadata }
     interface Manifest with 
         member this.metadata = this.metadata
-
-type Transport = {
-    material: string
-    quantity: Measure
-    from: string
-    target: string
-}
 
 type TransportFullManifest = 
     { status: TransportStatus option

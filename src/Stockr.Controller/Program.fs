@@ -42,6 +42,7 @@ let main argv =
                 stock_controller.runController token client
             | "TransportOrderController" -> 
                 transport_order_controller.runController token client
+            | _ -> async { printfn "Unknown controller: %s" x }
     )
     |> Async.Parallel
     |> Async.RunSynchronously

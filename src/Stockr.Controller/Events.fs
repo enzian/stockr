@@ -57,8 +57,8 @@ let withCurrentTime event =
     let now = DateTimeOffset.UtcNow
     { event with spec.eventTime = now.UtcTicks }
 
-let withComponent component event =
-    { event with spec.reportingComponent = component }
+let withComponent ``component`` event =
+    { event with spec.reportingComponent = ``component`` }
 
 let withReportingInstance instance event =
     { event with spec.reportingInstance = instance }

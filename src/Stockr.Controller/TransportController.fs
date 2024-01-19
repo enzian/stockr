@@ -33,6 +33,7 @@ let startTransport
     (x : Event<TransportFullManifest>)
     (stocks : Map<string, StockSpecManifest>)
     (logger : IEventLogger) = 
+    stocksApi.FilterByLabel
     match x with
     | Update transport
     | Create transport ->

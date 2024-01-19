@@ -24,12 +24,12 @@ let stock_10pcs_A_1 : StockSpecManifest = {
 let fakeApi<'T when 'T :> Manifest> = {
      new ManifestApi<'T> with
           member _.Get _ = None
-          member _.Delete = (fun _ -> Ok ())
-          member _.List = []
-          member _.FilterByLabel = (fun _ -> [])
-          member _.Put = (fun _ -> Ok ())
-          member _.WatchFromRevision = (fun _ _ -> async { return Observable.empty })
-          member _.Watch = (fun _ -> async { return Observable.empty })
+          member _.Delete _ = Ok ()
+          member _.List _ _ _ = { items = []; continuations = 0 }
+          member _.FilterByLabel _ = []
+          member _.Put _ = Ok ()
+          member _.WatchFromRevision _ _ = async { return Observable.empty }
+          member _.Watch _ = async { return Observable.empty }
      }
 
 let logger = {
@@ -66,14 +66,14 @@ let ``Stocks on source locations are split when the transport is started`` () =
      let stockApi = {
           new ManifestApi<StockSpecManifest> with
                member _.Get _ = None
-               member _.Delete = (fun _ -> Ok ())
-               member _.List = []
-               member _.FilterByLabel = (fun _ -> [])
-               member _.Put = (fun x ->
+               member _.Delete _ = Ok ()
+               member _.List _ _ _ = { items = []; continuations = 0 }
+               member _.FilterByLabel _ = []
+               member _.Put x =
                     putted <- putted @ [x]
-                    Ok ())
-               member _.WatchFromRevision = (fun _ _ -> async { return Observable.empty })
-               member _.Watch = (fun _ -> async { return Observable.empty })
+                    Ok ()
+               member _.WatchFromRevision _ _ = async { return Observable.empty }
+               member _.Watch _ = async { return Observable.empty }
      }
 
      transport_order_controller.startTransport stockApi (Create transport) stocks logger
@@ -109,14 +109,14 @@ let ``if a transport already has a stock reserved, not action is taken`` () =
      let stockApi = {
           new ManifestApi<StockSpecManifest> with
                member _.Get _ = None
-               member _.Delete = (fun _ -> Ok ())
-               member _.List = []
-               member _.FilterByLabel = (fun _ -> [])
-               member _.Put = (fun x ->
+               member _.Delete _ = Ok ()
+               member _.List _ _ _ = { items = []; continuations = 0 }
+               member _.FilterByLabel _ = []
+               member _.Put x =
                     putted <- putted @ [x]
-                    Ok ())
-               member _.WatchFromRevision = (fun _ _ -> async { return Observable.empty })
-               member _.Watch = (fun _ -> async { return Observable.empty })
+                    Ok ()
+               member _.WatchFromRevision _ _ = async { return Observable.empty }
+               member _.Watch _ = async { return Observable.empty }
      }
 
      transport_order_controller.startTransport stockApi (Create transport) stocks logger
@@ -150,14 +150,14 @@ let ``Stocks are moved to the target location when the transport is completed`` 
      let stockApi = {
           new ManifestApi<StockSpecManifest> with
                member _.Get _ = None
-               member _.Delete = (fun _ -> Ok ())
-               member _.List = []
-               member _.FilterByLabel = (fun _ -> [])
-               member _.Put = (fun x ->
+               member _.Delete _ = Ok ()
+               member _.List _ _ _ = { items = []; continuations = 0 }
+               member _.FilterByLabel _ = []
+               member _.Put x =
                     putted <- putted @ [x]
-                    Ok ())
-               member _.WatchFromRevision = (fun _ _ -> async { return Observable.empty })
-               member _.Watch = (fun _ -> async { return Observable.empty })
+                    Ok ()
+               member _.WatchFromRevision _ _ = async { return Observable.empty }
+               member _.Watch _ = async { return Observable.empty }
      }
      
      transport_order_controller.completeTransport logger (Create transport) stocks stockApi
@@ -191,14 +191,14 @@ let ``Reservation labels are removed from stocks once transports are closed`` ()
      let stockApi = {
           new ManifestApi<StockSpecManifest> with
                member _.Get _ = None
-               member _.Delete = (fun _ -> Ok ())
-               member _.List = []
-               member _.FilterByLabel = (fun _ -> [])
-               member _.Put = (fun x ->
+               member _.Delete _ = Ok ()
+               member _.List _ _ _ = { items = []; continuations = 0 }
+               member _.FilterByLabel _ = []
+               member _.Put x =
                     putted <- putted @ [x]
-                    Ok ())
-               member _.WatchFromRevision = (fun _ _ -> async { return Observable.empty })
-               member _.Watch = (fun _ -> async { return Observable.empty })
+                    Ok ()
+               member _.WatchFromRevision _ _ = async { return Observable.empty }
+               member _.Watch _ = async { return Observable.empty }
      }
      
      transport_order_controller.closeTransport logger (Create transport) stocks stockApi
@@ -222,30 +222,20 @@ let ``Closed Transports are deleted when cleanup runs and they have no reserved 
                cancellationRequested = false;
                }
           status = Some { state = "closed" ; reason = None}}
-     let stockApi = {
-          new ManifestApi<StockSpecManifest> with
-               member _.Get _ = None
-               member _.Delete = (fun _ -> Ok ())
-               member _.List = []
-               member _.FilterByLabel = (fun _ -> [])
-               member _.Put = (fun x -> Ok ())
-               member _.WatchFromRevision = (fun _ _ -> async { return Observable.empty })
-               member _.Watch = (fun _ -> async { return Observable.empty })
-     }
+     let stockApi = fakeApi<StockSpecManifest>
      let mutable deleted = [];
      let transportsApi = {
           new ManifestApi<TransportFullManifest> with
                member _.Get _ = None
-               member _.Delete = (fun x -> 
+               member _.Delete x = 
                     deleted <- deleted @ [x]
-                    Ok ())
-               member _.List = []
-               member _.FilterByLabel = (fun _ -> [])
-               member _.Put = (fun x -> Ok ())
-               member _.WatchFromRevision = (fun _ _ -> async { return Observable.empty })
-               member _.Watch = (fun _ -> async { return Observable.empty })
+                    Ok ()
+               member _.List _ _ _ = { items = []; continuations = 0 }
+               member _.FilterByLabel _ = []
+               member _.Put _ = Ok ()
+               member _.WatchFromRevision _ _ = async { return Observable.empty }
+               member _.Watch _ = async { return Observable.empty }
      }
-     
 
      transport_order_controller.cleanupTransports [stock_10pcs_A_1] [transport] logger transportsApi stockApi
      
@@ -275,29 +265,28 @@ let ``Closed Transports with reserved stocks are deleted after the reservation w
      let stockApi = {
           new ManifestApi<StockSpecManifest> with
                member _.Get _ = None
-               member _.Delete = (fun _ -> Ok ())
-               member _.List = []
-               member _.FilterByLabel = (fun _ -> [])
-               member _.Put = (fun x -> 
+               member _.Delete _ = Ok ()
+               member _.List _ _ _ = { items = []; continuations = 0 }
+               member _.FilterByLabel _ = []
+               member _.Put x = 
                     updatedStocks <- updatedStocks @ [x]
-                    Ok ())
-               member _.WatchFromRevision = (fun _ _ -> async { return Observable.empty })
-               member _.Watch = (fun _ -> async { return Observable.empty })
+                    Ok ()
+               member _.WatchFromRevision _ _ = async { return Observable.empty }
+               member _.Watch _ = async { return Observable.empty }
      }
      let mutable deleted = [];
      let transportsApi = {
           new ManifestApi<TransportFullManifest> with
                member _.Get _ = None
-               member _.Delete = (fun x -> 
+               member _.Delete x = 
                     deleted <- deleted @ [x]
-                    Ok ())
-               member _.List = []
-               member _.FilterByLabel = (fun _ -> [])
-               member _.Put = (fun x -> Ok ())
-               member _.WatchFromRevision = (fun _ _ -> async { return Observable.empty })
-               member _.Watch = (fun _ -> async { return Observable.empty })
+                    Ok ()
+               member _.List _ _ _ = { items = []; continuations = 0 }
+               member _.FilterByLabel _ = []
+               member _.Put _ = Ok ()
+               member _.WatchFromRevision _ _ = async { return Observable.empty }
+               member _.Watch _ = async { return Observable.empty }
      }
-     
 
      transport_order_controller.cleanupTransports [reservedStock] [transport] logger transportsApi stockApi
      

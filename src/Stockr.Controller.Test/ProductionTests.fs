@@ -54,12 +54,13 @@ let stocks: StockSpecManifest seq =
 let fakeApi<'T when 'T :> Manifest> =
     { new ManifestApi<'T> with
         member _.Get _ = None
-        member _.Delete = (fun _ -> Ok())
-        member _.List = []
-        member _.FilterByLabel = (fun _ -> [])
-        member _.Put = (fun _ -> Ok())
-        member _.WatchFromRevision = (fun _ _ -> async { return Observable.empty })
-        member _.Watch = (fun _ -> async { return Observable.empty }) }
+        member _.Delete _ = Ok ()
+        member _.List _ _ _ = { items = []; continuations = 0 }
+        member _.FilterByLabel _ = []
+        member _.Put _ = Ok ()
+        member _.WatchFromRevision _ _ = async { return Observable.empty }
+        member _.Watch _ = async { return Observable.empty }
+    }
 
 let logger =
     { new IEventLogger with

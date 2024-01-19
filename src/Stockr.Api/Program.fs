@@ -13,6 +13,7 @@ open Manifesto.AspNet
 
 module Program =
     open dotnet_etcd.interfaces
+    open System.Security.Claims
     let exitCode = 0
 
     [<EntryPoint>]
@@ -41,9 +42,10 @@ module Program =
             match group, version, kind with
             | "events.stockr.io", "v1", t when [ "event"; "events" ] |> Seq.contains t -> Some(60L * 60L * 3L)
             | _ -> None
+        let isAuthorized kind version group verb identity =  true;
 
         app
-        |> hosting.configureApp (api.v1.controllers.endpoints knownKeyspaces resourceTTL)
+        |> hosting.configureApp (api.v1.controllers.endpoints knownKeyspaces resourceTTL isAuthorized)
 
         app.Run()
         exitCode

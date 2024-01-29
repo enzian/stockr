@@ -7,6 +7,6 @@
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Manifesto.AspNet" Version="0.0.5" />
+    <PackageReference Include="Manifesto.AspNet" Version="0.0.6" />
   </ItemGroup>
 </Project>

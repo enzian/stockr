@@ -26,7 +26,7 @@ let fakeApi<'T when 'T :> Manifest> = {
           member _.Get _ = None
           member _.Delete _ = Ok ()
           member _.List _ _ _ = { items = []; continuations = 0 }
-          member _.FilterByLabel _ = []
+          member _.FilterByLabel _ _ _ = []
           member _.Put _ = Ok ()
           member _.WatchFromRevision _ _ = async { return Observable.empty }
           member _.Watch _ = async { return Observable.empty }
@@ -68,7 +68,7 @@ let ``Stocks on source locations are split when the transport is started`` () =
                member _.Get _ = None
                member _.Delete _ = Ok ()
                member _.List _ _ _ = { items = []; continuations = 0 }
-               member _.FilterByLabel _ = []
+               member _.FilterByLabel _ _ _ = []
                member _.Put x =
                     putted <- putted @ [x]
                     Ok ()
@@ -111,7 +111,7 @@ let ``if a transport already has a stock reserved, not action is taken`` () =
                member _.Get _ = None
                member _.Delete _ = Ok ()
                member _.List _ _ _ = { items = []; continuations = 0 }
-               member _.FilterByLabel _ = []
+               member _.FilterByLabel _ _ _ = []
                member _.Put x =
                     putted <- putted @ [x]
                     Ok ()
@@ -152,7 +152,7 @@ let ``Stocks are moved to the target location when the transport is completed`` 
                member _.Get _ = None
                member _.Delete _ = Ok ()
                member _.List _ _ _ = { items = []; continuations = 0 }
-               member _.FilterByLabel _ = []
+               member _.FilterByLabel _ _ _ = []
                member _.Put x =
                     putted <- putted @ [x]
                     Ok ()
@@ -193,7 +193,7 @@ let ``Reservation labels are removed from stocks once transports are closed`` ()
                member _.Get _ = None
                member _.Delete _ = Ok ()
                member _.List _ _ _ = { items = []; continuations = 0 }
-               member _.FilterByLabel _ = []
+               member _.FilterByLabel _ _ _ = []
                member _.Put x =
                     putted <- putted @ [x]
                     Ok ()
@@ -231,7 +231,7 @@ let ``Closed Transports are deleted when cleanup runs and they have no reserved 
                     deleted <- deleted @ [x]
                     Ok ()
                member _.List _ _ _ = { items = []; continuations = 0 }
-               member _.FilterByLabel _ = []
+               member _.FilterByLabel _ _ _ = []
                member _.Put _ = Ok ()
                member _.WatchFromRevision _ _ = async { return Observable.empty }
                member _.Watch _ = async { return Observable.empty }
@@ -267,7 +267,7 @@ let ``Closed Transports with reserved stocks are deleted after the reservation w
                member _.Get _ = None
                member _.Delete _ = Ok ()
                member _.List _ _ _ = { items = []; continuations = 0 }
-               member _.FilterByLabel _ = []
+               member _.FilterByLabel _ _ _ = []
                member _.Put x = 
                     updatedStocks <- updatedStocks @ [x]
                     Ok ()
@@ -282,7 +282,7 @@ let ``Closed Transports with reserved stocks are deleted after the reservation w
                     deleted <- deleted @ [x]
                     Ok ()
                member _.List _ _ _ = { items = []; continuations = 0 }
-               member _.FilterByLabel _ = []
+               member _.FilterByLabel _ _ _ = []
                member _.Put _ = Ok ()
                member _.WatchFromRevision _ _ = async { return Observable.empty }
                member _.Watch _ = async { return Observable.empty }

@@ -1,7 +1,6 @@
 module transportation
 
 open api
-open measurement
 
 let stockTransportReservation = "logistics.stockr.io/transport-order"
 

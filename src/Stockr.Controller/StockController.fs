@@ -14,7 +14,7 @@ let runController (ct: CancellationToken) client =
         let stocksApi =
             ManifestsFor<StockSpecManifest> client (sprintf "%s/%s/%s/" stock.apiGroup stock.apiVersion stock.apiKind)
         let locationsApi =
-            ManifestsFor<LocationsSpecManifest> client (sprintf "%s/%s/%s/" location.apiGroup location.apiVersion location.apiKind)
+            ManifestsFor<LocationSpecManifest> client (sprintf "%s/%s/%s/" location.apiGroup location.apiVersion location.apiKind)
 
         //setup the rective pipelines that feed data from the resource API.
         let (locations, _) = utilities.watchResourceOfType locationsApi ct
@@ -30,7 +30,7 @@ let runController (ct: CancellationToken) client =
 
             match phantomStock with
             | Some x ->
-                let locationSpec : LocationsSpecManifest =
+                let locationSpec : LocationSpecManifest =
                     { metadata =
                         { name = x.spec.location
                           labels = None

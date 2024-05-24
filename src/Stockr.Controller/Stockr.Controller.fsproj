@@ -9,6 +9,7 @@
     <Compile Include="Measurement.fs" />
     <Compile Include="ProductionOrder.fs" />
     <Compile Include="Stock.fs" />
+    <Compile Include="Logistics.fs" />
     <Compile Include="Location.fs" />
     <Compile Include="Transport.fs" />
     <Compile Include="StockController.fs" />
@@ -19,6 +20,6 @@
   <ItemGroup>
     <PackageReference Include="Argu" Version="[6.1.1,7.0)" />
     <PackageReference Include="FSharp.Control.Reactive" Version="[5.0.5,6.0)" />
-    <PackageReference Include="Manifesto.AspNet.Client" Version="[0.0.6,1.0]" />
+    <PackageReference Include="Manifesto.Client.Fsharp" Version="[0.0.6,1.0]" />
   </ItemGroup>
 </Project>

@@ -24,7 +24,7 @@ let watchResourceOfType<'T when 'T :> Manifest> (api: ManifestApi<'T>) (token: C
     let initialResourcesObs =
         Subject.behavior (initialResources.items |> Seq.map (fun x -> (x.metadata.name, x)) |> Map.ofSeq)
     
-    let watchObs = api.WatchFromRevision startRevision token |> Async.RunSynchronously |> publish
+    let watchObs = api.WatchFromRevision ((int64)startRevision) token |> Async.RunSynchronously |> publish
     
     let aggregate = 
         merge

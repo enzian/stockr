@@ -7,17 +7,19 @@ open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Hosting
 open dotnet_etcd
 open dotnet_etcd.interfaces
+open System.Net.Http
+open System.Net
 
 open Manifesto.AspNet
 
 
 module Program =
-    open dotnet_etcd.interfaces
-    open System.Security.Claims
     let exitCode = 0
 
     [<EntryPoint>]
     let main args =
+
+        HttpClient.DefaultProxy <- new WebProxy()
 
         let builder = WebApplication.CreateBuilder(args)
         builder.Services |> hosting.configureServices

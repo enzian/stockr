@@ -10,7 +10,7 @@ type LocationSpec = {
     id: string
 }
 
-type LocationsSpecManifest = 
+type LocationSpecManifest = 
     { spec: LocationSpec
       metadata: Metadata }
     interface Manifest with 

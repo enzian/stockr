@@ -56,7 +56,7 @@ let fakeApi<'T when 'T :> Manifest> =
         member _.Get _ = None
         member _.Delete _ = Ok ()
         member _.List _ _ _ = { items = []; continuations = 0 }
-        member _.FilterByLabel _ _ _ = []
+        member _.FilterByLabel _ _ _ = {items = []; continuations = 0L}
         member _.Put _ = Ok ()
         member _.WatchFromRevision _ _ = async { return Observable.empty }
         member _.Watch _ = async { return Observable.empty }

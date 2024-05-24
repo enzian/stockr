@@ -1,23 +1,18 @@
-#r "nuget: FsHttp, 11.0.0"
+#r "nuget: Manifesto.Client.Fsharp"
 
-#load "../Stockr/Api.fs"
-#load "../Stockr/Filters.fs"
-#load "../Stockr/Stocks.fs"
+#load "../Stockr.Controller/Stock.fs"
 
 open System.Net.Http
 open System
 open stock
 
-// type StockSpec = { material: string; qty : string }
-// type StockStatus = { B: string }
-
 let client= new HttpClient()
-client.BaseAddress <- new Uri("https://localhost:7243/apis/")
+client.BaseAddress <- new Uri("http://localhost:5000/apis/")
 
 let stockApi = 
     api.ManifestsFor<StockSpecManifest> 
         client
-        "logistics.stockr.io/v1alpha1/stock"
+        "stocks.stockr.io/v1alpha1/stock/"
 
 let stock: StockSpecManifest = { 
     metadata = { 
@@ -29,9 +24,9 @@ let stock: StockSpecManifest = {
         annotations = None
         revision = None }
     spec = {
-        Location = "10-00-001"
-        Material = "p146723-11342"
-        Amount = { qty = 10.0 ; unit = "pcs"} }
+        location = "10-00-001"
+        material = "p146723-11342"
+        quantity = "10pcs" }
 }
 
 stockApi.Put stock

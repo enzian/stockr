@@ -87,14 +87,14 @@ let ``For newly created Production Order, new transports should be created.`` ()
     |> Seq.head
     |> (fun t ->
         t.spec.material |> should equal firstTransport.material
-        t.spec.quantity |> toMeasure |> should equal (10m, "pcs")
+        t.spec.quantity |> toQuantity |> should equal (10m, "pcs")
     )
 
     createdTransports
     |> Seq.last
     |> (fun t ->
         t.spec.material |> should equal secondTransport.material
-        t.spec.quantity |> toMeasure |> should equal (20m, "pcs")
+        t.spec.quantity |> toQuantity |> should equal (20m, "pcs")
     )
 
 [<Fact>]
@@ -111,6 +111,6 @@ let ``For newly created Production Order, a transport without a source must be c
     |> Seq.last
     |> (fun t ->
         t.spec.material |> should equal "material-3"
-        t.spec.quantity |> toMeasure |> should equal (10m, "pcs")
+        t.spec.quantity |> toQuantity |> should equal (10m, "pcs")
         t.spec.source |> should equal None
     )

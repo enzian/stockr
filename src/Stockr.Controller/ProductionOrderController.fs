@@ -23,21 +23,21 @@ let findStockWithQuantity (stocks: StockSpecManifest seq) material quantity =
     stocks
     |> Seq.filter (fun x -> x.spec.material = material)
     |> Seq.filter (fun x ->
-        let stockAmount = x.spec.quantity |> toMeasure
+        let stockAmount = x.spec.quantity |> toQuantity
         let (stockQty, stockUnit) = stockAmount
         let (qtyRequest, uRequest) = quantity
 
         if (stockUnit = uRequest) then
             stockQty >= qtyRequest
         else
-            let (d, u) = stockAmount |> convertMeasure uRequest
+            let (d, u) = stockAmount |> convertQuantity uRequest
             d >= qtyRequest)
     |> Seq.tryHead
 
 let sumTransportQuantities unit (transports: TransportSpecManifest seq) =
     transports
     |> Seq.map (fun x ->
-        let (d, u) = x.spec.quantity |> toMeasure |> convertMeasure unit
+        let (d, u) = x.spec.quantity |> toQuantity |> convertQuantity unit
         d)
     |> Seq.sum
 
@@ -46,15 +46,15 @@ let createTransportForNewProductionOrders
     (availableStock: StockSpecManifest seq)
     =
     let productionLines = productionOrder.spec.bom
-    let pqty, _ = productionOrder.spec.amount |> toMeasure
+    let pqty, _ = productionOrder.spec.amount |> toQuantity
 
     let transportsWithoutSource: (TransportSpecManifest seq) =
         productionLines
         |> Seq.map (fun x ->
-            let d, u = x.quantity |> toMeasure
+            let d, u = x.quantity |> toQuantity
 
             {| x with
-                quantity = Measure(d * pqty, u) |})
+                quantity = Quantity(d * pqty, u) |})
         |> Seq.map (fun x ->
             { metadata =
                 { name = sprintf "%s-%s" productionOrder.metadata.name (utilities.randomStr 7)
@@ -65,7 +65,7 @@ let createTransportForNewProductionOrders
               spec =
                 { source = None
                   material = x.material
-                  quantity = x.quantity |> measureToString
+                  quantity = x.quantity |> quantityToString
                   target = productionOrder.spec.from
                   cancellationRequested = false } })
 
@@ -73,7 +73,7 @@ let createTransportForNewProductionOrders
         transportsWithoutSource
         |> Seq.map (fun x ->
             let stock =
-                findStockWithQuantity availableStock x.spec.material (x.spec.quantity |> toMeasure)
+                findStockWithQuantity availableStock x.spec.material (x.spec.quantity |> toQuantity)
 
             match stock with
             | Some stock ->
@@ -186,6 +186,7 @@ let runController (ct: CancellationToken) client =
 
         aggregateTransports
         |> withLatestFrom (fun x y -> (x, y)) aggregateProdOrders
+        |> ignore
         
 
         (Async.AwaitWaitHandle ct.WaitHandle) |> Async.RunSynchronously |> ignore

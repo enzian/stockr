@@ -40,13 +40,13 @@ module api =
 
 type ProductionLine = {
     material: string
-    quantity: Measure
+    quantity: Quantity
 }
 
 type ProductionOrder = {
     bom: ProductionLine list
     material: string
-    amount: Measure
+    amount: Quantity
     from: string option
     target: string option
 }
@@ -54,19 +54,19 @@ type ProductionOrder = {
 let toProductionOrder (apiSpec : api.ProductionOrder) = 
     {
         material = apiSpec.material
-        amount = apiSpec.amount |> toMeasure
+        amount = apiSpec.amount |> toQuantity
         from = if apiSpec.from = "" then None else Some apiSpec.from
         target = if apiSpec.from = "" then None else Some apiSpec.from
-        bom = apiSpec.bom |> List.map (fun x -> { material = x.material; quantity = x.quantity |> toMeasure })
+        bom = apiSpec.bom |> List.map (fun x -> { material = x.material; quantity = x.quantity |> toQuantity })
     }
 
 let toProductionOrderSpec (po : ProductionOrder) : api.ProductionOrder = 
     {
         material = po.material
-        amount = po.amount |> measureToString
+        amount = po.amount |> quantityToString
         from = match po.from with | Some x -> x | None -> ""
         target = match po.target with | Some x -> x | None -> ""
-        bom = po.bom |> List.map (fun x -> { material = x.material; quantity = x.quantity |> measureToString })
+        bom = po.bom |> List.map (fun x -> { material = x.material; quantity = x.quantity |> quantityToString })
     }
 
 type Status = 

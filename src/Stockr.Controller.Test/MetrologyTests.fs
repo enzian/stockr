@@ -9,7 +9,7 @@ open FsUnit
 [<InlineData("2.1m", 2.1, "m")>]
 [<InlineData("2.m", 2.0, "m")>]
 let ``Converting Measures from strings`` (input: string) (value: float) (unit: string) =
-    let dec, u = input |> toMeasure
+    let dec, u = input |> toQuantity
     dec |> should equal value
     u |> should equal unit
 
@@ -18,6 +18,6 @@ let ``Converting Measures from strings`` (input: string) (value: float) (unit: s
 [<InlineData(1.0, "cm", 10, "mm")>]
 [<InlineData(1.0, "m", 100, "cm")>]
 let ``Convert Unit Of Length`` (rightVal : decimal) (rightU: string) (leftVal: decimal) (leftU: string) =
-    let v, u = (Measure (rightVal, rightU)) |> convertMeasure leftU
+    let v, u = (Quantity (rightVal, rightU)) |> convertQuantity leftU
     v |> should equal leftVal
     u |> should equal leftU

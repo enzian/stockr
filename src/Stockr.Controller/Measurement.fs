@@ -2,7 +2,7 @@ module measurement
 open System
 open System.Text.RegularExpressions
 
-type Measure = (decimal * string)
+type Quantity = (decimal * string)
 
 let decRegex = new Regex(@"^([\d\.]*)\s*([\w\/_]*)$", RegexOptions.Compiled)
 
@@ -15,13 +15,13 @@ let amountFromString (str: string) =
     else
         None
 
-let toMeasure (str: string) = 
+let toQuantity (str: string) = 
     match amountFromString str with
-    | Some (d, u) -> Measure (d, u)
+    | Some (d, u) -> Quantity (d, u)
     | None -> failwithf "Could not parse %s" str
 
 let toString (d, u) = sprintf "%.2f%s" d u
-let measureToString (x : Measure) = toString x
+let quantityToString (x : Quantity) = toString x
 
 let convert fromUnit targetUnit qty =
     let factor = 
@@ -35,9 +35,9 @@ let convert fromUnit targetUnit qty =
         | _ -> failwithf "Could not convert %s to %s" fromUnit targetUnit
     qty * factor
 
-let convertMeasure toUnit (d, fromUnit) =
+let convertQuantity toUnit (d, fromUnit) =
     let convertedQty = convert fromUnit toUnit d
-    Measure (convertedQty, toUnit)
+    Quantity (convertedQty, toUnit)
 
 
     

@@ -14,10 +14,10 @@ let client = new HttpClient()
 client.BaseAddress <- new Uri("http://localhost:5000/apis/")
 
 let locationApi =
-    ManifestsFor<LocationSpecManifest> client "logistics.stockr.io/v1alpha1/location/"
+    ManifestsFor<LocationSpecManifest> client $"{location.apiGroup}/{location.apiVersion}/{location.apiKind}/"
 
 let stockApi =
-    ManifestsFor<StockSpecManifest> client "stocks.stockr.io/v1alpha1/stock/"
+    ManifestsFor<StockSpecManifest> client $"{stock.apiGroup}/{stock.apiVersion}/{stock.apiKind}/"
 
 locationApi.Put
     { metadata =

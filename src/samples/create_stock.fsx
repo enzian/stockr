@@ -9,14 +9,12 @@ open stock
 let client= new HttpClient()
 client.BaseAddress <- new Uri("http://localhost:5000/apis/")
 
-let stockApi = 
-    api.ManifestsFor<StockSpecManifest> 
-        client
-        "stocks.stockr.io/v1alpha1/stock/"
+let stockApi =
+    api.ManifestsFor<StockSpecManifest> client $"{stock.apiGroup}/{stock.apiVersion}/{stock.apiKind}/"
 
 let stock: StockSpecManifest = { 
     metadata = { 
-        name = "test1"
+        name = "test2"
         ``namespace`` = None
         labels = 
             Some (Map [("locations.stockr.io/footprint", "tub");
@@ -24,7 +22,7 @@ let stock: StockSpecManifest = {
         annotations = None
         revision = None }
     spec = {
-        location = "10-00-001"
+        location = "10-00-002"
         material = "p146723-11342"
         quantity = "10pcs" }
 }

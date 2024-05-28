@@ -20,7 +20,7 @@ let appendToDict<'T when 'T :> Manifest> (d: Map<string, 'T>) (e: Event<'T>) =
 
 let watchResourceOfType<'T when 'T :> Manifest> (api: ManifestApi<'T>) (token: CancellationToken) =
     let initialResources = api.List token 0 1000
-    let startRevision = initialResources.items |> mostRecentRevision
+    let startRevision = initialResources.continuations
     let initialResourcesObs =
         Subject.behavior (initialResources.items |> Seq.map (fun x -> (x.metadata.name, x)) |> Map.ofSeq)
     

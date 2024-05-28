@@ -33,7 +33,6 @@ let startTransport
     (x : Event<TransportFullManifest>)
     (stocks : Map<string, StockSpecManifest>)
     (logger : IEventLogger) = 
-    stocksApi.FilterByLabel
     match x with
     | Update transport
     | Create transport ->
@@ -72,8 +71,8 @@ let startTransport
                     (sprintf "Transport %s has no source specified, cannot split stock" transport.metadata.name)
             | Some source ->
                 let stock = stocks |> Map.find source
-                let (Some (stockQty, stockUnit)) = stock.spec.quantity |> amountFromString
-                let (Some (transportQty, transportUnit)) = transport.spec.quantity |> amountFromString
+                let (Some (stockQty, stockUnit)) = stock.spec.quantity |> quantityFromString
+                let (Some (transportQty, transportUnit)) = transport.spec.quantity |> quantityFromString
 
                 let updatedStock =
                     { stock with
@@ -326,7 +325,7 @@ let runController (ct: CancellationToken) client =
                 (sprintf "%s/%s/%s/status" api.Group api.Version api.Kind)
 
         let stocksApi =
-            ManifestsFor<StockSpecManifest> client (sprintf "%s/%s/%s/" stock.apiGroup stock.apiVersion stock.apiKind)
+            ManifestsFor<StockSpecManifest> client (sprintf "%s/%s/%s/" stock.api.Group stock.api.Version stock.api.Kind)
 
         let (aggregateTransports, transportChanges) =
             utilities.watchResourceOfType transportsApi ct
@@ -334,7 +333,7 @@ let runController (ct: CancellationToken) client =
         let (aggregateStocks, _) = utilities.watchResourceOfType stocksApi ct
 
         let eventsApi =
-            ManifestsFor<EventSpecManifest> client (sprintf "%s/%s/%s/" events.apiGroup events.apiVersion events.apiKind)
+            ManifestsFor<EventSpecManifest> client (sprintf "%s/%s/%s/" events.api.Group events.api.Version events.api.Kind)
 
         let eventFactory () =
             emptyEvent
@@ -361,7 +360,10 @@ let runController (ct: CancellationToken) client =
             | Update x -> Some x
             | Create x -> Some x
             | _ -> None)
-        |> filter (fun change -> change.spec.source.IsNone)
+        |> filter (fun change -> 
+            change.spec.source.IsNone 
+            && change.status.IsSome
+            && change.status.Value.state <> "pending")
         |> subscribe (fun x -> 
             let logObjRef event = event |> relatedTo { transportObjRef with
                                                            name = x.metadata.name

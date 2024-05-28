@@ -2,9 +2,10 @@ module stock
 
 open api
 
-let apiVersion = "v1alpha1"
-let apiGroup = "stocks.stockr.io"
-let apiKind = "stock" 
+module api = 
+  let Version = "v1alpha1"
+  let Group = "stocks.stockr.io"
+  let Kind = "stock" 
 
 type StockSpec = {
     material: string

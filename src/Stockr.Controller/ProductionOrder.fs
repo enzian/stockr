@@ -19,6 +19,8 @@ module api =
 
     type ProductionStatus = {
         state: string
+        reason: string option
+        amount: string
     }
 
     type ProductionOrderSpecManifest = 
@@ -34,9 +36,15 @@ module api =
         interface Manifest with 
             member this.metadata = this.metadata 
 
+    type ProductionOrderStateManifest = 
+        { status: ProductionStatus option
+          metadata: Metadata }
+        interface Manifest with 
+            member this.metadata = this.metadata 
+
     let Version = "v1alpha1"
-    let apiGroup = "logistics.stockr.io"
-    let apiKind = "production-order"
+    let Group = "logistics.stockr.io"
+    let Kind = "production-order"
 
 type ProductionLine = {
     material: string
@@ -92,15 +100,19 @@ let toString = function
 type ProductionStatus = {
     state: Status
     reason: string option
+    amount: Quantity
 }
 
 let toProductionStatus (apiStatus : api.ProductionStatus) = 
     {
         state = apiStatus.state |> toStatus
-        reason = None
+        reason = apiStatus.reason
+        amount = apiStatus.amount |> toQuantity
     }
 
 let toProductionStatusSpec (ps : ProductionStatus) : api.ProductionStatus = 
     {
         state = ps.state |> toString
+        amount = ps.amount |> quantityToString
+        reason = ps.reason
     }

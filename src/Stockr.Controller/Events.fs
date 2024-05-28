@@ -3,9 +3,10 @@ module events
 open api
 open System
 
-let apiVersion = "v1"
-let apiGroup = "events.stockr.io"
-let apiKind = "event"
+module api =
+    let Version = "v1"
+    let Group = "events.stockr.io"
+    let Kind = "event"
 
 type ObjectReference =
     { kind: string

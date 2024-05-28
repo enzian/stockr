@@ -12,7 +12,7 @@ let runController (ct: CancellationToken) client =
         printfn "Starting ProductionOrderController"
 
         let stocksApi =
-            ManifestsFor<StockSpecManifest> client (sprintf "%s/%s/%s/" stock.apiGroup stock.apiVersion stock.apiKind)
+            ManifestsFor<StockSpecManifest> client (sprintf "%s/%s/%s/" stock.api.Group stock.api.Version stock.api.Kind)
         let locationsApi =
             ManifestsFor<LocationSpecManifest> client (sprintf "%s/%s/%s/" location.apiGroup location.apiVersion location.apiKind)
 

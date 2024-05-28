@@ -17,11 +17,11 @@
             "internalConsoleOptions": "openOnSessionStart"
         },
         {
-            "name": "Launch API CS",
+            "name": "Launch Controller",
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/src/Stockr.Api.CSharp/bin/Debug/net8.0/Stockr.Api.CSharp.dll",
+            "program": "${workspaceFolder}/src/Stockr.Controller/bin/Debug/net8.0/Stockr.Controller.dll",
             "args": [],
             "cwd": "${workspaceFolder}",
             "console": "internalConsole",

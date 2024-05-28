@@ -6,7 +6,7 @@ type Quantity = (decimal * string)
 
 let decRegex = new Regex(@"^([\d\.]*)\s*([\w\/_]*)$", RegexOptions.Compiled)
 
-let amountFromString (str: string) = 
+let quantityFromString (str: string) = 
     let matches = decRegex.Match(str)
     if matches.Success then
         let dec = Decimal.Parse(matches.Groups.[1].Value)
@@ -16,7 +16,7 @@ let amountFromString (str: string) =
         None
 
 let toQuantity (str: string) = 
-    match amountFromString str with
+    match quantityFromString str with
     | Some (d, u) -> Quantity (d, u)
     | None -> failwithf "Could not parse %s" str
 

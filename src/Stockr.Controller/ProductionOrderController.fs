@@ -19,6 +19,18 @@ let productionOrderLabel = "logistics.stockr.io/production-order"
 [<Literal>]
 let sourceStockLabel = "logistics.stockr.io/from-stock"
 
+let defaultProdOutputStock (prodOrder: ProductionOrderFullManifest) : stock.StockSpecManifest =
+    { metadata =
+        { name = $"prod-{prodOrder.metadata.name}"
+          labels = Some(Map.ofList [ productionOrderLabel, prodOrder.metadata.name ])
+          annotations = None
+          revision = None
+          ``namespace`` = None }
+      spec =
+        { location = prodOrder.spec.target
+          material = prodOrder.spec.material
+          quantity = "0pcs" } }
+
 let findStockWithQuantity (stocks: StockSpecManifest seq) material quantity =
     stocks
     |> Seq.filter (fun x -> x.spec.material = material)
@@ -79,11 +91,11 @@ let createTransportForNewProductionOrders
             | Some stock ->
                 { metadata = x.metadata
                   spec = { x.spec with source = Some stock.metadata.name }
-                  status = Some { state = "created" ; reason = None } }
+                  status = Some { state = "created"; reason = None } }
             | None ->
                 { metadata = x.metadata
                   spec = { x.spec with source = None }
-                  status = Some { state = "pending" ; reason = Some "" } })
+                  status = Some { state = "pending"; reason = Some "" } })
 
     transportsWithSource
 
@@ -95,7 +107,7 @@ let runController (ct: CancellationToken) client =
         let prodOrderApi =
             ManifestsFor<production.api.ProductionOrderFullManifest>
                 client
-                (sprintf "%s/%s/%s/" apiGroup Version apiKind)
+                (sprintf "%s/%s/%s/" production.api.Group production.api.Version production.api.Kind)
 
         let transportsApi =
             ManifestsFor<TransportFullManifest>
@@ -108,12 +120,14 @@ let runController (ct: CancellationToken) client =
                 (sprintf "%s/%s/%s/status" transportation.api.Group transportation.api.Version transportation.api.Kind)
 
         let stocksApi =
-            ManifestsFor<StockSpecManifest> client (sprintf "%s/%s/%s/" stock.apiGroup stock.apiVersion stock.apiKind)
+            ManifestsFor<StockSpecManifest>
+                client
+                (sprintf "%s/%s/%s/" stock.api.Group stock.api.Version stock.api.Kind)
 
         let eventsApi =
             ManifestsFor<EventSpecManifest>
                 client
-                (sprintf "%s/%s/%s/" events.apiGroup events.apiVersion events.apiKind)
+                (sprintf "%s/%s/%s/" events.api.Group events.api.Version events.api.Kind)
 
         let eventFactory () =
             emptyEvent
@@ -124,7 +138,7 @@ let runController (ct: CancellationToken) client =
         let logger = newEventLogger eventsApi eventFactory
 
 
-        //setup the rective pipelines that feed data from the resource API.
+        //setup the reactive pipelines that feed data from the resource API.
         let (aggregateProdOrders, productionOrderEvents) =
             utilities.watchResourceOfType prodOrderApi ct
 
@@ -144,11 +158,12 @@ let runController (ct: CancellationToken) client =
             let logObjRef event =
                 event
                 |> relatedTo
-                    { kind = apiKind
-                      group = apiGroup
+                    { kind = production.api.Kind
+                      group = production.api.Group
                       name = order.metadata.name
                       apiVersion = Version
                       resourceVersion = order.metadata.revision.Value }
+
             let logger = logger |> customize (logObjRef)
 
             for transport in transports do
@@ -160,7 +175,9 @@ let runController (ct: CancellationToken) client =
                           name = transport.metadata.name
                           apiVersion = transportation.api.Version
                           resourceVersion = transport.metadata.revision |> Option.defaultValue "" }
+
                 let logger = logger |> customize (logObjRef)
+
                 match transportsApi.Put transport with
                 | Ok () ->
                     logger.Info
@@ -172,22 +189,64 @@ let runController (ct: CancellationToken) client =
                 | Error err ->
                     logger.Warn
                         "TransportCreationFailed"
-                        (sprintf "Could not create transport for production order %s: %A"
-                            order.metadata.name err)
+                        (sprintf "Could not create transport for production order %s: %A" order.metadata.name err)
 
-            logger.Info 
-                "TransportsCreated"
-                        (sprintf
-                            "Created transports production order %s"
-                            order.metadata.name)
-        )
+            logger.Info "TransportsCreated" (sprintf "Created transports production order %s" order.metadata.name))
         |> ignore
 
 
-        aggregateTransports
-        |> withLatestFrom (fun x y -> (x, y)) aggregateProdOrders
+        productionOrderEvents
+        |> choose (fun x ->
+            match x with
+            | Update po -> Some po
+            | _ -> None)
+        |> filter (fun x -> x.status |> Option.isSome)
+        |> withLatestFrom (fun x y -> (x, y)) aggregateStocks
+        |> map (fun (prodOrder, stocks) ->
+            let (_, prodUnit) = prodOrder.spec.amount |> toQuantity
+            let (prodQty, prodUnit) = if prodOrder.status.IsSome then prodOrder.status.Value.amount |> toQuantity else (0M, prodUnit)
+
+            let existingOutputStocks =
+                stocks.Values
+                |> Seq.filter (fun x ->
+                    x.metadata.labels
+                    |> Option.defaultValue Map.empty
+                    |> Map.tryPick (fun k v ->
+                        if k = productionOrderLabel && v = prodOrder.metadata.name then
+                            Some v
+                        else
+                            None)
+                    |> Option.defaultValue ""
+                    |> (fun x -> x = prodOrder.metadata.name))
+
+            let totalQtyPresent =
+                existingOutputStocks
+                |> Seq.map (fun x -> x.spec.quantity |> toQuantity)
+                |> Seq.map (fun (v, u) -> convert u prodUnit v)
+                |> Seq.sum
+
+            let designatedOutputStock =
+                existingOutputStocks
+                |> Seq.filter (fun x -> x.spec.location = prodOrder.spec.target)
+                |> Seq.tryHead
+                |> Option.defaultValue (defaultProdOutputStock prodOrder)
+
+            if totalQtyPresent < prodQty then
+                let diffQty = prodQty - totalQtyPresent
+
+                let (outputStockAmount, outputStockUnit) =
+                    designatedOutputStock.spec.quantity |> toQuantity
+
+                { designatedOutputStock with
+                    spec.quantity = (outputStockAmount + diffQty, outputStockUnit) |> quantityToString }
+            else
+                designatedOutputStock)
+        |> subscribe (fun stock ->
+            match stocksApi.Put stock with
+            | Ok _ -> ()
+            | Error e -> eprintfn "Error updating stock: %s" (e |> string))
         |> ignore
-        
+
 
         (Async.AwaitWaitHandle ct.WaitHandle) |> Async.RunSynchronously |> ignore
         printfn "Stopped ProductionOrderController"

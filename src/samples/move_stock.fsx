@@ -51,4 +51,4 @@ let stock : StockSpecManifest =
 stockApi.Put stock
     
 
-logistics.MoveQuantity stockApi stock "10-01-001"
+logistics.MoveStockFromTo stockApi stock "10-01-001"
